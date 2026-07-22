@@ -1,0 +1,25 @@
+data:
+  root_dir: "/Users/mohamed/Desktop/tuh/isip.piconepress.com/projects/tuh_eeg/downloads/tuh_eeg_abnormal/v3.0.0"
+  cache_dir: "./data_cache/tuh_e2e_cache"   # shared by every TUH script -- same
+                                              # preprocessing, no rebuild needed.
+  sfreq: 100
+  bandpass: [0.5, 45]
+  n_channels: 21
+  skip_sec: 60
+  max_sec: 120
+  clip_uv: 800.0
+  divisor: 22.9   # measured directly from TUH's raw amplitude scale (see TUHEndToEndDataset).
+
+model:
+  n_classes: 2
+  dropout: 0.5
+
+training:
+  epochs: 20
+  lr: 0.001
+  weight_decay: 0.001
+  class_weight_power: 1.5
+  batch_size: 32
+  val_frac: 0.2
+  early_stop_patience: 15
+  seed: 42

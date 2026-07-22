@@ -1,0 +1,27 @@
+data:
+  root_dir: "/Users/mohamed/Desktop/tuh/isip.piconepress.com/projects/tuh_eeg/downloads/tuh_eeg_abnormal/v3.0.0"
+  cache_dir: "./data_cache/tuh_e2e_cache"   # same cache as the other TUH scripts -- no rebuild needed.
+  sfreq: 100
+  bandpass: [0.5, 45]
+  n_channels: 21
+  skip_sec: 60
+  max_sec: 120
+  clip_uv: 800.0
+  divisor: 22.9
+
+model:
+  n_classes: 2
+  dropout: 0.5
+  n_hops: 2   # 2 rounds of per-sample graph-conv-style mixing, each with its own learnable
+              # alpha and a fresh adjacency recomputed from that hop's refined features.
+              # n_hops=1 reproduces the single-hop coupling result exactly (accuracy=0.8442).
+
+training:
+  epochs: 20
+  lr: 0.001
+  weight_decay: 0.001
+  class_weight_power: 1.5
+  batch_size: 32
+  val_frac: 0.2
+  early_stop_patience: null   # disabled -- checkpoint selection is by best val_bal_acc regardless.
+  seed: 42

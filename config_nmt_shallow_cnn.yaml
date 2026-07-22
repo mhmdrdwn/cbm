@@ -1,0 +1,37 @@
+data:
+  raw_dir:   "/Users/mohamed/Downloads/nmt_scalp_eeg_dataset"
+  cache_dir: "./data_cache/nmt_e2e_cache"   # CAR, skip_sec/max_sec windowing, fixed-scale
+                                              # normalization baked in -- see NMTEndToEndDataset.
+  sfreq: 100
+  bandpass: [0.5, 45]
+  n_channels: 21
+  skip_sec: 60
+  max_sec: 120
+  clip_uv: 800.0
+  divisor: 0.3
+  channel_names: ["FP1", "FP2", "F3", "F4", "C3", "C4", "P3", "P4", "O1", "O2",
+                  "F7", "F8", "T3", "T4", "T5", "T6", "FZ", "PZ", "CZ", "A1", "A2"]
+                  # real NMT channel order, verified against 15 sampled EDF files
+                  # (all identical order/count) -- used for get_channel_positions'
+                  # real 10-20 scalp coordinates in the electrode-coupling loss.
+
+model:
+  n_classes: 2
+  dropout: 0.5
+
+training:
+  epochs: 50
+  lr: 0.001
+  weight_decay: 0.001
+  class_weight_power: 1.5
+  batch_size: 32
+  lambda_coupling: 0.1   # electrode-coupling prior weight (ShallowCNNPhysicsLoss) -- nearby
+                          # 10-20 electrodes' spatial-filter weights pulled toward higher
+                          # similarity than distant ones.
+  lambda_class: 0.1      # class-conditional Jansen-Rit excitatory-gain weight, same convention
+                          # as this project's other physics losses.
+  phys_warmup_epochs: 5  # classifier gets room to learn a real decision boundary before the
+                          # physics terms pull on the shared pooled features.
+  val_frac: 0.2
+  early_stop_patience: 15
+  seed: 42

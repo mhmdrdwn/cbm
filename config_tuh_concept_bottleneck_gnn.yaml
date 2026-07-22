@@ -1,0 +1,38 @@
+data:
+  root_dir: "/Users/mohamed/Desktop/tuh/isip.piconepress.com/projects/tuh_eeg/downloads/tuh_eeg_abnormal/v3.0.0"
+  cache_dir: "./data_cache/tuh_e2e_cache"
+  concept_cache_dir: "./data_cache/tuh_concepts_cache"
+  sfreq: 100
+  bandpass: [0.5, 45]
+  n_channels: 21
+  skip_sec: 60
+  max_sec: 120
+  clip_uv: 800.0
+  divisor: 22.9
+
+model:
+  n_classes: 2
+  n_filters_time: 40
+  n_filters_spat: 40
+  n_hops: 2          # graph-coupling main branch, same default as config_tuh_graph_cnn.yaml.
+  beta_band: [13, 30]
+  beta_filters: 16    # small, dedicated -- only needs to predict 5 beta concepts, not 23.
+  dropout: 0.5
+  residual: true
+
+training:
+  epochs: 50
+  lr: 0.001
+  weight_decay: 0.001
+  lambda_concept: 0.5
+  class_weight_power: 1.5
+  batch_size: 32
+  val_frac: 0.2
+  early_stop_patience: null
+  val_ema_decay: 0.9   # best-checkpoint selection uses an EMA of val_bal_acc, not the raw
+                         # per-epoch value -- smooths out noise from the 543-subject val set
+                         # so a single lucky spike can't get locked in as "best". 0.9 gives an
+                         # effective window of roughly 1/(1-0.9)=10 epochs, same order of
+                         # magnitude as the fixed-warmup version this replaced, but weighted
+                         # smoothly instead of a hard cutoff.
+  seed: 42

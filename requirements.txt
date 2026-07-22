@@ -1,0 +1,8 @@
+torch==2.12.1
+mne==1.12.1
+pandas==3.0.3
+antropy==0.2.2
+numpy==2.4.6
+scipy==1.18.0
+scikit-learn==1.9.0
+PyYAML==6.0.3
