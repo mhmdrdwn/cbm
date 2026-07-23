@@ -1,0 +1,40 @@
+data:
+  root_dir: "/Users/mohamed/Downloads/dataset-working"
+  cache_dir: "./data_cache/caueeg_e2e_cache"
+  concept_cache_dir: "./data_cache/caueeg_concepts_cache"
+  task: "dementia"
+  sfreq: 100
+  bandpass: [0.5, 45]
+  n_channels: 19
+  skip_sec: 0
+  window_sec: 60   # non-overlapping windows; train (and eval, if eval_tta) subjects get
+                     # multiple per recording (see CAUEEGEndToEndDataset's docstring). val
+                     # always stays 1 window/subject (fast per-epoch checkpoint selection).
+  max_windows_per_subject: 5   # caps how many windows one long recording contributes to train,
+                                 # so a handful of very long recordings don't dominate.
+  clip_uv: 800.0
+  divisor: 10.8
+  eval_tta: true   # average predictions over each eval subject's windows (test-time
+                     # augmentation) instead of scoring a single window -- matches the
+                     # official CAUEEG reference implementation's validated approach.
+
+model:
+  n_classes: 3
+  n_filters_time: 40
+  n_filters_spat: 40
+  n_hops: 2
+  beta_band: [13, 30]
+  beta_filters: 16
+  dropout: 0.5
+  residual: true
+
+training:
+  epochs: 50
+  lr: 0.001
+  weight_decay: 0.001
+  lambda_concept: 0.5
+  class_weight_power: 1.5
+  batch_size: 32
+  early_stop_patience: null
+  val_ema_decay: 0.9
+  seed: 42

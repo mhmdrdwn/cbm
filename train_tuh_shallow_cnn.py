@@ -10,20 +10,17 @@ from torch.utils.data import DataLoader, Subset
 
 from data.tuh_e2e_loader import TUHEndToEndDataset, collate_tuh_e2e
 from models.shallow_cnn import ShallowConvNet
-from train_utils import split_validation
+from train_utils import split_validation, tee_stdout_to_file
 from utils.metrics import compute_loso_metrics
 
 
 def train_and_evaluate(cfg, device):
     """
     Plain ShallowConvNet on TUH -- no physics loss of any kind, ignores
-    the model's own A_pred output entirely. Deliberately NOT using
-    ShallowCNNPhysicsLoss (train_nmt_shallow_cnn.py's current default):
-    on NMT, every electrode-coupling physics variant tried underperformed
-    the plain CNN (75.7% plain vs 73.5%/73.0%/69.2% for fixed-proximity/
-    learnable-coupling/NFT-init variants). This mirrors the plain,
-    best-performing NMT configuration on TUH instead of the since-
-    regressed physics-augmented script.
+    the model's own A_pred output entirely. Electrode-coupling/Jansen-Rit
+    physics losses were tried in an earlier version of this project and
+    every variant underperformed the plain CNN on real held-out accuracy,
+    so this stays with the plain, best-performing configuration.
     """
     m, t, d = cfg["model"], cfg["training"], cfg["data"]
 
@@ -154,9 +151,10 @@ def main():
     random.seed(seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
 
-    train_and_evaluate(cfg, device)
+    with tee_stdout_to_file("tuh_shallow_cnn_run.log"):
+        print(f"Using device: {device}")
+        train_and_evaluate(cfg, device)
 
 
 if __name__ == "__main__":

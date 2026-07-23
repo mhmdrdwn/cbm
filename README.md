@@ -1,19 +1,12 @@
 # EEG Abnormality Classification: CNN, Graph-Coupling, and Concept Bottleneck Models
 
-Binary normal/abnormal EEG classification on two datasets -- the
-[NMT Scalp EEG Dataset](https://dll.seecs.nust.edu.pk/downloads/) and the
-TUH Abnormal EEG Corpus (v3.0.0) -- comparing a plain CNN backbone against
-a graph-coupling extension and a concept bottleneck model that routes
-classification through interpretable clinical EEG features.
-
-This project earlier explored transformer/attention-based architectures
-(channel-graph attention with Jansen-Rit physics constraints and Granger-
-causality edges) and other datasets (ds004504, an fMRI connectivity
-dataset); all were dropped after every fully-learned cross-channel
-attention mechanism tried underperformed a much simpler CNN backbone on
-real held-out accuracy (see `models/shallow_cnn.py`'s docstring). That
-earlier code has been removed from this repo -- see git history if it's
-ever needed again.
+EEG classification on two datasets: the TUH Abnormal EEG Corpus
+(v3.0.0, binary normal/abnormal) and CAUEEG (Chung-Ang University
+Hospital EEG dataset, two ready-made benchmark tasks: binary
+normal/abnormal and 3-class normal/MCI/dementia). Here we compare a plain
+CNN backbone against a graph-coupling extension and a concept
+bottleneck model that routes classification through interpretable
+clinical EEG features.
 
 ## Models
 
@@ -22,33 +15,71 @@ ever needed again.
   (Schirrmeister et al. 2017, "ShallowFBCSPNet"). The best-performing
   architecture found in this project; every attention/graph-based
   alternative tried has underperformed it.
-- **`ShallowCNNPhysicsLoss`** (`models/shallow_cnn.py`) -- optional
-  physics/anatomy-informed auxiliary losses on top of `ShallowConvNet`
-  (NMT only): an electrode-coupling prior pulling the spatial filter's
-  implied channel similarity toward a learnable, scalp-position-
-  initialized embedding, plus a class-conditional Jansen-Rit excitatory-
-  gain term. Used by `train_nmt_shallow_cnn.py`; `train_tuh_shallow_cnn.py`
-  intentionally skips it (see that script's docstring for why).
 - **`ShallowGNN`** (`models/graph_coupling_cnn.py`) -- multi-hop
   extension of `ShallowConvNet`: after the temporal conv, each hop
   recomputes a per-sample cosine-similarity adjacency over the model's
   own channel features and mixes across it with a learnable per-hop
   scalar, before the usual spatial collapse. At `n_hops=1` this reduces
-  exactly to a single-hop coupling design. TUH only.
+  exactly to a single-hop coupling design.
 - **`ConceptBottleneckShallowCNN`** / **`ConceptBottleneckGNN`**
   (`models/concept_bottleneck.py`) -- CNN or graph-coupling backbone ->
   28 predicted clinical EEG concepts (regional band powers, hemispheric
   asymmetries, theta/alpha ratios, alpha peak frequency/amplitude) -> a
   classifier that consumes the concepts (not raw backbone features)
-  instead. TUH only. Makes intervention meaningful: overriding a
-  predicted concept and re-running the classifier actually changes the
-  output, since the classifier has no shortcut back to the raw features.
-  `ConceptBottleneckGNN` adds a small dedicated FFT-isolated beta-band
-  branch (13-30Hz) alongside the main graph-coupling backbone, and both
-  variants hard-zero 4 concepts confirmed to carry no signal (Spearman
-  rank correlation not statistically significant) before the classifier
-  sees them.
+  instead. Makes intervention meaningful: overriding a predicted concept
+  and re-running the classifier actually changes the output, since the
+  classifier has no shortcut back to the raw features. `ConceptBottleneckGNN`
+  adds a small dedicated FFT-isolated beta-band branch (13-30Hz) alongside
+  the main graph-coupling backbone. Region/asymmetry-pair-to-channel-index
+  mappings are dataset-specific (`REGIONS`/`ASYM_PAIRS` for TUH,
+  `REGIONS_CAUEEG`/`ASYM_PAIRS_CAUEEG` for CAUEEG -- verified programmatically
+  from each dataset's own channel order, not assumed by analogy). TUH's
+  variants additionally hard-zero 4 concepts confirmed to carry no signal
+  there (Spearman rank correlation not statistically significant) --
+  CAUEEG's don't assume that finding transfers, so nothing is masked there
+  without separately checking.
 
+All models take `n_channels`/`n_classes` as constructor parameters, so
+the same classes serve both datasets and both CAUEEG tasks.
+
+## CAUEEG-specific details
+
+CAUEEG's clinical protocol alternates brief eyes-open/closed instructions
+with photic driving-response blocks (3-30Hz flash) rather than one long
+continuous resting recording like TUH. `CAUEEGEndToEndDataset`
+(`data/caueeg_e2e_loader.py`) selects only eyes-closed, non-photic
+segments (via each subject's event log) to avoid the photic response
+contaminating the alpha/beta band-power concepts, concatenates them, and
+chops the result into non-overlapping `window_sec` (60s default) windows.
+**Train** subjects contribute several windows each (capped at
+`max_windows_per_subject`, so a few very long recordings don't dominate);
+**val** always stays one window per subject (fast per-epoch checkpoint
+selection); **eval** uses one window per subject unless `eval_tta: true`
+(default), in which case it gets the same multi-window treatment as
+train and predictions are averaged back to one-per-subject
+(`aggregate_predictions_by_subject`, `utils/metrics.py`) before scoring
+-- test-time augmentation, matching the validated approach in the
+official CAUEEG reference implementation
+([ipis-mjkim/caueeg-ceednet](https://github.com/ipis-mjkim/caueeg-ceednet)).
+Concept R^2 (concept-bottleneck scripts) is reported per-window, not
+TTA-aggregated -- each window has its own true concepts.
+
+CAUEEG also gets an additional per-channel z-score normalization
+(`compute_eeg_channel_norm`/`normalize_eeg`), fit on the training set and
+applied at batch time on top of the existing fixed-divisor scale, right
+before the model sees the signal -- also matching the reference
+implementation's normalization. It does NOT affect concept computation,
+which still reads the divisor-scaled (not z-scored) raw signal.
+
+CAUEEG ships two benchmark tasks (`data.task: "abnormal"` or
+`"dementia"` in the config) sharing the same signal files and official
+splits, with the healthy class remapped to the end (`Abnormal=0,
+Normal=1`; `Dementia=0, MCI=1, Normal=2`) to match this project's
+"pathology first" convention used everywhere else. Because each CAUEEG
+model has 2 configs (one per task) but one script, the config path is
+a command-line argument rather than hardcoded:
+`python train_caueeg_shallow_cnn.py config_caueeg_dementia_shallow_cnn.yaml`
+(defaults to the `abnormal` config if omitted).
 
 ## Setup
 
@@ -60,65 +91,71 @@ pip install -r requirements.txt
 
 ## Usage
 
-Each script reads its own YAML config (same base name, `config_*.yaml`)
-for data paths, model hyperparameters, and training settings.
+Each script reads a YAML config for data paths, model hyperparameters,
+and training settings. Every `train_*.py` script also writes its full
+run output (epoch-by-epoch progress, final eval results) to a `.log`
+file matching its checkpoint's name, in addition to printing to the
+console (`train_utils.tee_stdout_to_file`) -- both are overwritten each
+run, same as the checkpoint.
 
 ```bash
-# NMT: ShallowConvNet + physics-informed losses
-python train_nmt_shallow_cnn.py
+# --- TUH (config hardcoded per script) ---
+python train_tuh_shallow_cnn.py               # plain ShallowConvNet
+python train_tuh_graph_cnn.py                  # multi-hop graph-coupling extension
+python train_tuh_concept_bottleneck.py          # concept bottleneck, CNN backbone
+python train_tuh_concept_bottleneck_gnn.py       # concept bottleneck, graph-coupling backbone + beta branch
 
-# TUH: plain ShallowConvNet (no physics loss)
-python train_tuh_shallow_cnn.py
-
-# TUH: multi-hop graph-coupling extension
-python train_tuh_graph_cnn.py
-
-# TUH: concept bottleneck, CNN backbone
-python train_tuh_concept_bottleneck.py
-
-# TUH: concept bottleneck, graph-coupling backbone + beta branch
-python train_tuh_concept_bottleneck_gnn.py
-
-# Concept bottleneck analysis (run against an already-trained GNN checkpoint):
+# concept bottleneck analysis (run against an already-trained TUH GNN checkpoint):
 python check_concept_rank_correlation.py       # R^2 vs Spearman per concept
 python tune_tuh_concept_bottleneck_threshold.py # decision-threshold tuning (fit on val, apply to eval)
 python recalibrate_tuh_concept_bottleneck.py    # isotonic recalibration (fit on val, apply to eval)
+
+# --- CAUEEG (config path as argv, abnormal or dementia) ---
+python train_caueeg_shallow_cnn.py               config_caueeg_abnormal_shallow_cnn.yaml
+python train_caueeg_graph_cnn.py                  config_caueeg_dementia_graph_cnn.yaml
+python train_caueeg_concept_bottleneck.py          config_caueeg_abnormal_concept_bottleneck.yaml
+python train_caueeg_concept_bottleneck_gnn.py       config_caueeg_dementia_concept_bottleneck_gnn.yaml
 ```
 
-All TUH scripts share one raw-EEG cache (`data_cache/tuh_e2e_cache`); the
-concept-bottleneck scripts additionally use a separate concept cache
-(`data_cache/tuh_concepts_cache`) so raw concept values aren't
-recomputed on every run. Both caches, and all `*.pt` checkpoints, are
-gitignored (see `.gitignore`) -- they're local build artifacts, not
-source.
+TUH scripts share one raw-EEG cache (`data_cache/tuh_e2e_cache`); CAUEEG
+scripts share `data_cache/caueeg_e2e_cache` (both tasks -- preprocessing
+doesn't depend on which task's labels/split are used). The concept-
+bottleneck scripts additionally use a separate concept cache
+(`data_cache/tuh_concepts_cache` / `data_cache/caueeg_concepts_cache`)
+so raw concept values aren't recomputed on every run. All caches, and
+every `*.pt` checkpoint, are gitignored (see `.gitignore`) -- they're
+local build artifacts, not source.
 
 ## Layout
 
 ```
-config_nmt_shallow_cnn.yaml              NMT ShallowConvNet + physics losses
-config_tuh_shallow_cnn.yaml              TUH plain ShallowConvNet
-config_tuh_graph_cnn.yaml                TUH ShallowGNN (graph coupling)
-config_tuh_concept_bottleneck.yaml       TUH ConceptBottleneckShallowCNN
-config_tuh_concept_bottleneck_gnn.yaml   TUH ConceptBottleneckGNN
-train_nmt_shallow_cnn.py
+config_tuh_*.yaml                        TUH configs (one per model)
+config_caueeg_{abnormal,dementia}_*.yaml  CAUEEG configs (one per model x task)
 train_tuh_shallow_cnn.py
 train_tuh_graph_cnn.py
 train_tuh_concept_bottleneck.py
 train_tuh_concept_bottleneck_gnn.py
-train_utils.py                split_validation (class-stratified train/val split)
-check_concept_rank_correlation.py       R^2 vs Spearman per concept
-tune_tuh_concept_bottleneck_threshold.py  decision-threshold tuning
-recalibrate_tuh_concept_bottleneck.py     isotonic recalibration
+train_caueeg_shallow_cnn.py
+train_caueeg_graph_cnn.py
+train_caueeg_concept_bottleneck.py
+train_caueeg_concept_bottleneck_gnn.py
+train_utils.py                split_validation (TUH's class-stratified train/val split),
+                               tee_stdout_to_file (run output -> console + .log file)
+check_concept_rank_correlation.py       R^2 vs Spearman per concept (TUH)
+tune_tuh_concept_bottleneck_threshold.py  decision-threshold tuning (TUH)
+recalibrate_tuh_concept_bottleneck.py     isotonic recalibration (TUH)
 data/
-  nmt_e2e_loader.py            NMTEndToEndDataset -- raw time series, CAR, fixed-scale norm
-  tuh_e2e_loader.py            TUHEndToEndDataset -- TUH counterpart
-  electrode_positions.py       real 10-20 scalp coordinates (MNE standard_1020 montage)
-  concept_cache.py             compute-once-then-cache for raw clinical EEG concepts
+  tuh_e2e_loader.py            TUHEndToEndDataset -- raw time series, CAR, fixed-scale norm
   tuh_concepts_loader.py       TUHWithConceptsDataset -- wraps TUHEndToEndDataset + cached concepts
+  caueeg_e2e_loader.py         CAUEEGEndToEndDataset -- eyes-closed segment selection + windowing,
+                                per-channel normalization helpers, TTA-eval support
+  caueeg_concepts_loader.py    CAUEEGWithConceptsDataset -- wraps CAUEEGEndToEndDataset + cached concepts
+  concept_cache.py             compute-once-then-cache for raw clinical EEG concepts (shared)
 models/
-  shallow_cnn.py                ShallowConvNet, ShallowCNNPhysicsLoss
+  shallow_cnn.py                ShallowConvNet
   graph_coupling_cnn.py          ShallowGNN (multi-hop graph coupling)
   concept_bottleneck.py          ConceptBottleneckShallowCNN, ConceptBottleneckGNN, concept computation
 utils/
-  metrics.py                   compute_loso_metrics (accuracy/F1/sensitivity/specificity)
+  metrics.py                   compute_loso_metrics (accuracy/F1/sensitivity/specificity),
+                                aggregate_predictions_by_subject (TTA aggregation)
 ```

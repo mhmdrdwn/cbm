@@ -1,4 +1,41 @@
+import contextlib
+import sys
+
 import numpy as np
+
+
+class _Tee:
+    """Writes to multiple streams at once -- see tee_stdout_to_file."""
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, data):
+        for s in self.streams:
+            s.write(data)
+
+    def flush(self):
+        for s in self.streams:
+            s.flush()
+
+
+@contextlib.contextmanager
+def tee_stdout_to_file(log_path):
+    """
+    Duplicates everything written to stdout (every existing print(...,
+    flush=True) call in the train_*.py scripts) to log_path as well, without
+    needing to touch any of those individual print calls. Overwrites
+    log_path each run, same as the checkpoint .pt files this project already
+    overwrites on each run -- the log is "this training run's output," not
+    an accumulating history.
+    """
+    with open(log_path, "w") as f:
+        original_stdout = sys.stdout
+        sys.stdout = _Tee(original_stdout, f)
+        try:
+            yield
+        finally:
+            sys.stdout = original_stdout
 
 
 def split_validation(dataset, indices, val_frac, seed):

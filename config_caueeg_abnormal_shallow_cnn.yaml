@@ -1,0 +1,33 @@
+data:
+  root_dir: "/Users/mohamed/Downloads/dataset-working"
+  cache_dir: "./data_cache/caueeg_e2e_cache"
+  task: "abnormal"
+  sfreq: 100
+  bandpass: [0.5, 45]
+  n_channels: 19
+  skip_sec: 0     # segments are already event-marked eyes-closed content, not one
+                   # long continuous recording -- see CAUEEGEndToEndDataset's docstring.
+  window_sec: 60   # non-overlapping windows; train (and eval, if eval_tta) subjects get
+                     # multiple per recording (see CAUEEGEndToEndDataset's docstring). val
+                     # always stays 1 window/subject (fast per-epoch checkpoint selection).
+  max_windows_per_subject: 5   # caps how many windows one long recording contributes to train,
+                                 # so a handful of very long recordings don't dominate.
+  clip_uv: 800.0
+  divisor: 10.8   # measured directly from this dataset's own (CAR'd) amplitude scale.
+  eval_tta: true   # average predictions over each eval subject's windows (test-time
+                     # augmentation) instead of scoring a single window -- matches the
+                     # official CAUEEG reference implementation's validated approach.
+
+model:
+  n_classes: 2
+  dropout: 0.5
+
+training:
+  epochs: 50
+  lr: 0.001
+  weight_decay: 0.001
+  class_weight_power: 1.5
+  batch_size: 32
+  early_stop_patience: 15
+  val_ema_decay: 0.9
+  seed: 42

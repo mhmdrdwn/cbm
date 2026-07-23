@@ -1,5 +1,6 @@
 import copy
 import random
+import sys
 import time
 
 import numpy as np
@@ -7,15 +8,13 @@ import torch
 import torch.nn.functional as F
 import yaml
 from sklearn.metrics import r2_score
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 
-from data.tuh_e2e_loader import TUHEndToEndDataset
-from data.tuh_concepts_loader import TUHWithConceptsDataset, collate_tuh_concepts
-from models.concept_bottleneck import (
-    CONCEPT_NAMES, DEAD_CONCEPT_INDICES, ConceptBottleneckGNN, compute_concept_norm, normalize_concepts,
-)
-from train_utils import split_validation, tee_stdout_to_file
-from utils.metrics import compute_loso_metrics
+from data.caueeg_e2e_loader import CAUEEGEndToEndDataset, compute_eeg_channel_norm, normalize_eeg
+from data.caueeg_concepts_loader import CAUEEGWithConceptsDataset, collate_caueeg_concepts
+from models.concept_bottleneck import CONCEPT_NAMES, ConceptBottleneckGNN, compute_concept_norm, normalize_concepts
+from train_utils import tee_stdout_to_file
+from utils.metrics import aggregate_predictions_by_subject, compute_loso_metrics
 
 
 def compute_concept_norm_from_dataset(ds, indices):
@@ -27,38 +26,47 @@ def compute_concept_norm_from_dataset(ds, indices):
 
 def train_and_evaluate(cfg, device):
     """
-    ConceptBottleneckGNN on TUH: same joint-training setup as
-    train_tuh_concept_bottleneck.py, swapping in the graph-coupling main
-    backbone + dedicated beta branch (models/concept_bottleneck.py's
-    ConceptBottleneckGNN docstring). Compare against the plain version's
-    real result -- accuracy=0.8188, mean concept R^2=-0.142, with every
-    beta concept negative (worst -2.344) and all 3 asymmetry concepts
-    negative -- to see whether either targeted fix actually moves those
-    specific numbers, not just overall accuracy.
+    ConceptBottleneckGNN on CAUEEG -- same graph-coupling main backbone +
+    dedicated beta branch as train_tuh_concept_bottleneck_gnn.py. Concepts
+    computed with REGIONS_CAUEEG/ASYM_PAIRS_CAUEEG. No concepts hard-masked
+    (dead_concept_indices=[]) -- see train_caueeg_concept_bottleneck.py's
+    docstring for why TUH's DEAD_CONCEPT_INDICES isn't assumed to transfer.
     """
     m, t, d = cfg["model"], cfg["training"], cfg["data"]
+    task = d["task"]
 
-    train_base = TUHEndToEndDataset(
-        root_dir=d["root_dir"], cache_dir=d["cache_dir"], split="train",
+    train_base = CAUEEGEndToEndDataset(
+        root_dir=d["root_dir"], task=task, cache_dir=d["cache_dir"], split="train",
         sfreq=d["sfreq"], bandpass=tuple(d["bandpass"]), skip_sec=d["skip_sec"],
-        max_sec=d["max_sec"], clip_uv=d["clip_uv"], divisor=d["divisor"],
+        window_sec=d["window_sec"], max_windows_per_subject=d.get("max_windows_per_subject", 5),
+        clip_uv=d["clip_uv"], divisor=d["divisor"],
     )
-    eval_base = TUHEndToEndDataset(
-        root_dir=d["root_dir"], cache_dir=d["cache_dir"], split="eval",
+    val_base = CAUEEGEndToEndDataset(
+        root_dir=d["root_dir"], task=task, cache_dir=d["cache_dir"], split="val",
         sfreq=d["sfreq"], bandpass=tuple(d["bandpass"]), skip_sec=d["skip_sec"],
-        max_sec=d["max_sec"], clip_uv=d["clip_uv"], divisor=d["divisor"],
+        window_sec=d["window_sec"], max_windows_per_subject=d.get("max_windows_per_subject", 5),
+        clip_uv=d["clip_uv"], divisor=d["divisor"],
     )
-    train_ds = TUHWithConceptsDataset(train_base, d["concept_cache_dir"], sfreq=d["sfreq"])
-    eval_ds = TUHWithConceptsDataset(eval_base, d["concept_cache_dir"], sfreq=d["sfreq"])
-
-    all_indices = list(range(len(train_ds)))
-    train_indices, val_indices = split_validation(train_ds, all_indices, t.get("val_frac", 0.2), t["seed"])
-    print(f"train={len(train_indices)} val={len(val_indices)} eval(test)={len(eval_ds)}", flush=True)
+    eval_base = CAUEEGEndToEndDataset(
+        root_dir=d["root_dir"], task=task, cache_dir=d["cache_dir"], split="eval",
+        sfreq=d["sfreq"], bandpass=tuple(d["bandpass"]), skip_sec=d["skip_sec"],
+        window_sec=d["window_sec"], max_windows_per_subject=d.get("max_windows_per_subject", 5),
+        clip_uv=d["clip_uv"], divisor=d["divisor"], eval_tta=d.get("eval_tta", True),
+    )
+    train_ds = CAUEEGWithConceptsDataset(train_base, d["concept_cache_dir"], sfreq=d["sfreq"])
+    val_ds = CAUEEGWithConceptsDataset(val_base, d["concept_cache_dir"], sfreq=d["sfreq"])
+    eval_ds = CAUEEGWithConceptsDataset(eval_base, d["concept_cache_dir"], sfreq=d["sfreq"])
+    print(f"task={task} train={len(train_ds)} val={len(val_ds)} eval(test)={len(eval_ds)}", flush=True)
 
     print("computing population concept normalization from train subjects...", flush=True)
     t0 = time.time()
-    band_power_median, band_power_iqr = compute_concept_norm_from_dataset(train_ds, train_indices)
+    band_power_median, band_power_iqr = compute_concept_norm_from_dataset(train_ds, list(range(len(train_ds))))
     band_power_median, band_power_iqr = band_power_median.to(device), band_power_iqr.to(device)
+    print(f"  done in {time.time()-t0:.1f}s", flush=True)
+
+    print("computing per-channel EEG normalization from train windows...", flush=True)
+    t0 = time.time()
+    eeg_mean, eeg_std = compute_eeg_channel_norm(train_ds, list(range(len(train_ds))))
     print(f"  done in {time.time()-t0:.1f}s", flush=True)
 
     model = ConceptBottleneckGNN(
@@ -67,24 +75,19 @@ def train_and_evaluate(cfg, device):
         n_hops=m.get("n_hops", 2), sfreq=d["sfreq"], beta_band=tuple(m.get("beta_band", (13, 30))),
         beta_filters=m.get("beta_filters", 16), dropout=m.get("dropout", 0.5),
         residual=m.get("residual", True),
+        dead_concept_indices=[],  # no dead concepts confirmed for this dataset yet.
     ).to(device)
 
-    # hop_alphas excluded from weight_decay -- same reasoning as every other
-    # gate/gain scalar in this project (config_tuh_graph_cnn.yaml's precedent):
-    # uniform L2 shrinkage would pull these back toward their neutral starting
-    # point regardless of whether the classification loss wants them to move,
-    # making it impossible to tell "this doesn't help" from "weight_decay
-    # never let it find out."
     no_decay_prefixes = ("hop_alphas.",)
     no_decay_params = [p for n, p in model.named_parameters() if n.startswith(no_decay_prefixes)]
     other_params = [p for n, p in model.named_parameters() if not n.startswith(no_decay_prefixes)]
-    assert len(no_decay_params) == m.get("n_hops", 2)  # hop_alphas (n_hops)
+    assert len(no_decay_params) == m.get("n_hops", 2)
     optim = torch.optim.Adam([
         {"params": other_params, "weight_decay": t["weight_decay"]},
         {"params": no_decay_params, "weight_decay": 0.0},
     ], lr=t["lr"])
 
-    train_labels = [train_ds.subjects[i]["label"] for i in train_indices]
+    train_labels = [s["label"] for s in train_ds.subjects]
     class_counts = np.bincount(train_labels, minlength=m["n_classes"]).astype(np.float32)
     class_weight_power = t.get("class_weight_power", 1.0)
     inv_freq = len(train_labels) / (m["n_classes"] * np.maximum(class_counts, 1))
@@ -100,22 +103,13 @@ def train_and_evaluate(cfg, device):
     best_state = None
     val_ema = None
 
-    # concept loss excludes the 4 confirmed-dead concepts (see DEAD_CONCEPT_INDICES's
-    # docstring) -- no point spending gradient fitting pure noise; the model's classifier
-    # never sees them either (models/concept_bottleneck.py's dead_mask handles that side).
-    live_concept_idx = torch.tensor(
-        [i for i in range(len(CONCEPT_NAMES)) if i not in DEAD_CONCEPT_INDICES], device=device,
-    )
-    print(f"excluding {len(DEAD_CONCEPT_INDICES)} confirmed-dead concepts from the concept loss: "
-          f"{[CONCEPT_NAMES[i] for i in DEAD_CONCEPT_INDICES]}", flush=True)
+    # unlike the TUH GNN script, nothing is excluded from the concept loss --
+    # dead_concept_indices=[] above means every one of the 28 concepts is live.
+    live_concept_idx = torch.tensor(list(range(len(CONCEPT_NAMES))), device=device)
 
-    train_loader = DataLoader(
-        Subset(train_ds, train_indices), batch_size=batch_size, shuffle=True, collate_fn=collate_tuh_concepts,
-    )
-    val_loader = DataLoader(
-        Subset(train_ds, val_indices), batch_size=batch_size, shuffle=False, collate_fn=collate_tuh_concepts,
-    )
-    eval_loader = DataLoader(eval_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_tuh_concepts)
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_caueeg_concepts)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_caueeg_concepts)
+    eval_loader = DataLoader(eval_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_caueeg_concepts)
 
     model.train()
     for epoch in range(t["epochs"]):
@@ -123,7 +117,7 @@ def train_and_evaluate(cfg, device):
         epoch_cls = epoch_conc = 0.0
         train_correct = n_seen = 0
         for raw_batch in train_loader:
-            x = raw_batch["raw_eeg"].to(device)
+            x = normalize_eeg(raw_batch["raw_eeg"].to(device), eeg_mean, eeg_std)
             labels = raw_batch["label"].to(device)
             true_concepts = normalize_concepts(
                 raw_batch["concepts_raw"].to(device), band_power_median, band_power_iqr,
@@ -149,7 +143,7 @@ def train_and_evaluate(cfg, device):
         with torch.no_grad():
             val_preds, val_labels = [], []
             for raw_batch in val_loader:
-                x = raw_batch["raw_eeg"].to(device)
+                x = normalize_eeg(raw_batch["raw_eeg"].to(device), eeg_mean, eeg_std)
                 logits, _ = model(x)
                 val_preds.extend(logits.argmax(dim=1).cpu().tolist())
                 val_labels.extend(raw_batch["label"].tolist())
@@ -158,16 +152,6 @@ def train_and_evaluate(cfg, device):
         val_bal_acc = (val_metrics["sensitivity"] + val_metrics["specificity"]) / 2
         model.train()
 
-        # best-checkpoint tracking selects by an EMA-SMOOTHED val_bal_acc, not the raw
-        # per-epoch value and not train accuracy. Raw val_bal_acc is noisy (543-subject
-        # val set) -- a single lucky spike could otherwise get locked in as "best". A
-        # fixed warmup period (tried first) fixes this too, but has an arbitrary
-        # all-or-nothing cutoff: a genuinely good epoch just under the cutoff gets
-        # excluded, while a noisy one just past it gets accepted. EMA is smoother --
-        # it takes several consecutive good epochs to move, regardless of when they
-        # happen, without needing to guess the right cutoff length. Not train accuracy:
-        # train_acc climbs steadily all training long in real runs here, so rewarding
-        # it directly would bias selection toward later, more-overfit epochs.
         val_ema = val_bal_acc if val_ema is None else ema_decay * val_ema + (1 - ema_decay) * val_bal_acc
         if val_ema > best_val_ema:
             best_val_ema, best_val_acc, best_epoch, epochs_since_best = val_ema, val_bal_acc, epoch, 0
@@ -194,31 +178,34 @@ def train_and_evaluate(cfg, device):
         "model_state": model.state_dict(), "best_epoch": int(best_epoch),
         "best_val_bal_acc": float(best_val_acc),
         "band_power_median": band_power_median.cpu(), "band_power_iqr": band_power_iqr.cpu(),
-    }, "tuh_concept_bottleneck_gnn_best_model.pt")
+    }, f"caueeg_{task}_concept_bottleneck_gnn_best_model.pt")
 
     model.eval()
-    all_preds, all_labels = [], []
+    all_probs, all_labels_raw, all_sids = [], [], []
     all_true_concepts, all_pred_concepts = [], []
     with torch.no_grad():
         for raw_batch in eval_loader:
-            x = raw_batch["raw_eeg"].to(device)
+            x = normalize_eeg(raw_batch["raw_eeg"].to(device), eeg_mean, eeg_std)
             true_concepts = normalize_concepts(
                 raw_batch["concepts_raw"].to(device), band_power_median, band_power_iqr,
             )
             logits, pred_concepts = model(x)
-            all_preds.extend(logits.argmax(dim=1).cpu().tolist())
-            all_labels.extend(raw_batch["label"].tolist())
+            all_probs.extend(F.softmax(logits, dim=-1).cpu().tolist())
+            all_labels_raw.extend(raw_batch["label"].tolist())
+            all_sids.extend(raw_batch["subject_id"])
             all_true_concepts.append(true_concepts.cpu().numpy())
             all_pred_concepts.append(pred_concepts.cpu().numpy())
 
+    # see train_caueeg_concept_bottleneck.py's eval block for why classification
+    # metrics are TTA-aggregated per subject but concept R^2 stays per-window.
+    all_preds, all_labels = aggregate_predictions_by_subject(all_probs, all_sids, all_labels_raw)
     metrics = compute_loso_metrics(all_preds, all_labels)
     true_c = np.concatenate(all_true_concepts)
     pred_c = np.concatenate(all_pred_concepts)
 
-    print("\n=== TUH Concept Bottleneck GNN Eval Results ===")
+    print(f"\n=== CAUEEG Concept Bottleneck GNN Eval Results ({task}, eval_tta={d.get('eval_tta', True)}) ===")
     for k, v in metrics.items():
         print(f"  {k}: {v:.4f}")
-    print("  (plain CNN baseline: accuracy=0.8514; plain concept bottleneck: accuracy=0.8188)")
 
     print(f"\n=== Concept Prediction Quality (R^2 per concept, n={len(true_c)}) ===")
     r2s = []
@@ -227,14 +214,14 @@ def train_and_evaluate(cfg, device):
         r2s.append(r2)
         marker = " <- beta" if name.endswith("_beta") else (" <- asym" if "asym" in name else "")
         print(f"  {name:<28} R2={r2:.3f}{marker}")
-    print(f"  mean R^2 across all 28 concepts: {np.mean(r2s):.3f} "
-          f"(plain concept bottleneck: -0.142)")
+    print(f"  mean R^2 across all 28 concepts: {np.mean(r2s):.3f}")
 
     return {"metrics": metrics, "concept_r2": dict(zip(CONCEPT_NAMES, r2s))}
 
 
 def main():
-    with open("config_tuh_concept_bottleneck_gnn.yaml") as f:
+    config_path = sys.argv[1] if len(sys.argv) > 1 else "config_caueeg_abnormal_concept_bottleneck_gnn.yaml"
+    with open(config_path) as f:
         cfg = yaml.safe_load(f)
 
     seed = cfg["training"]["seed"]
@@ -244,8 +231,8 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    with tee_stdout_to_file("tuh_concept_bottleneck_gnn_run.log"):
-        print(f"Using device: {device}")
+    with tee_stdout_to_file(f"caueeg_{cfg['data']['task']}_concept_bottleneck_gnn_run.log"):
+        print(f"Using device: {device}, config: {config_path}")
         train_and_evaluate(cfg, device)
 
 

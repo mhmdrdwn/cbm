@@ -4,9 +4,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from scipy.signal import welch
 
-# This project's ACTUAL channel order (data/tuh_e2e_loader.py's TARGET_CHANNELS,
-# identical to NMT's channel_names) -- NOT the ordering in the original proposal,
-# which used a different arrangement entirely. Using the wrong ordering wouldn't
+# This project's ACTUAL channel order (data/tuh_e2e_loader.py's TARGET_CHANNELS)
+# -- NOT the ordering in the original proposal, which used a different
+# arrangement entirely. Using the wrong ordering wouldn't
 # crash; it would silently pull the wrong channels into each "region" (e.g. the
 # original proposal's "frontal" indices [0,1,2,3,4,5,6] map to FP1,FP2,F3,F4,C3,
 # C4,P3 under THIS project's real ordering -- a mix of frontal/central/parietal
@@ -25,6 +25,22 @@ REGIONS = {
 F3_IDX, F4_IDX = 2, 3
 T3_IDX, T4_IDX = 12, 13
 O1_IDX, O2_IDX = 8, 9
+ASYM_PAIRS = [(F3_IDX, F4_IDX), (T3_IDX, T4_IDX), (O1_IDX, O2_IDX)]
+
+# CAUEEG (data/caueeg_e2e_loader.py's TARGET_CHANNELS) counterpart -- same 19
+# electrodes but a THIRD distinct ordering from both TUH/NMT and ds004504.
+# REGIONS/ASYM_PAIRS above were verified to reproduce byte-identical index
+# lists when re-derived programmatically from region/pair NAMES (not
+# hand-copied) -- REGIONS_CAUEEG uses that same name-based derivation against
+# CAUEEG's own channel order, not assumed by analogy to either other dataset.
+REGIONS_CAUEEG = {
+    "frontal":   [0, 5, 1, 6, 10, 13, 16],   # FP1,FP2,F3,F4,F7,F8,FZ
+    "temporal":  [11, 14, 12, 15],            # T3,T4,T5,T6
+    "central":   [2, 7, 17],                  # C3,C4,CZ
+    "parietal":  [3, 8, 18],                  # P3,P4,PZ
+    "occipital": [4, 9],                      # O1,O2
+}
+ASYM_PAIRS_CAUEEG = [(1, 6), (11, 14), (4, 9)]  # F3/F4, T3/T4, O1/O2
 
 BANDS = {
     "delta": (0.5, 4),
@@ -88,7 +104,7 @@ def fft_bandpass(x, sfreq, lo, hi):
     return torch.fft.irfft(X * mask, n=T, dim=-1)
 
 
-def compute_concepts_raw(eeg, sfreq=100):
+def compute_concepts_raw(eeg, sfreq=100, regions=None, asym_pairs=None):
     """
     Compute all 28 clinical EEG concepts analytically.
 
@@ -97,7 +113,12 @@ def compute_concepts_raw(eeg, sfreq=100):
          fixed-scale normalized). sfreq: this project's actual rate (100Hz
          everywhere, NOT the original proposal's 256Hz default -- using the
          wrong sfreq would silently misplace every frequency-band boundary
-         in the Welch PSD).
+         in the Welch PSD). regions/asym_pairs: which channel indices count
+         as which region/asymmetry pair -- default to REGIONS/ASYM_PAIRS
+         (TUH/NMT's 21-channel ordering); pass REGIONS_CAUEEG/ASYM_PAIRS_CAUEEG
+         for CAUEEG's different (19-channel) ordering. CONCEPT_NAMES stays
+         identical either way (region NAMES, not their channel indices,
+         drive it), only which channels a given concept is computed from.
 
     Returns: (28,) float32 array. Family 1 (band power, indices 0-19) is
     RAW log1p(power) here, NOT yet normalized -- population mean/std for
@@ -111,6 +132,9 @@ def compute_concepts_raw(eeg, sfreq=100):
     capture). Asymmetry/ratio/spectral-structure concepts (indices 20-27)
     are already self-contained/bounded and returned as-is.
     """
+    regions = REGIONS if regions is None else regions
+    asym_pairs = ASYM_PAIRS if asym_pairs is None else asym_pairs
+
     n_ch, n_samples = eeg.shape
     freqs, psd = welch(eeg, fs=sfreq, nperseg=min(512, n_samples))  # psd: (n_ch, n_freqs)
 
@@ -119,7 +143,7 @@ def compute_concepts_raw(eeg, sfreq=100):
         return np.log1p(psd_row[mask].mean()) if mask.any() else 0.0
 
     concepts = []
-    for region, ch_idx in REGIONS.items():
+    for region, ch_idx in regions.items():
         region_psd = psd[ch_idx].mean(axis=0)
         for lo, hi in BANDS.values():
             concepts.append(band_power(region_psd, lo, hi))
@@ -131,7 +155,7 @@ def compute_concepts_raw(eeg, sfreq=100):
     def alpha_power_ch(ch_idx):
         return psd[ch_idx, alpha_mask].mean() + 1e-8
 
-    for lo_idx, hi_idx in [(F3_IDX, F4_IDX), (T3_IDX, T4_IDX), (O1_IDX, O2_IDX)]:
+    for lo_idx, hi_idx in asym_pairs:
         lo_p, hi_p = alpha_power_ch(lo_idx), alpha_power_ch(hi_idx)
         asym = (hi_p - lo_p) / (hi_p + lo_p)  # in [-1, 1]
         concepts.append((asym + 1) / 2)  # rescale to [0, 1]
@@ -148,7 +172,7 @@ def compute_concepts_raw(eeg, sfreq=100):
     concepts.append(np.tanh(np.log1p(delta_glob / (alpha_glob + 1e-8))))  # delta/alpha ratio
     concepts.append(np.tanh(np.log1p((delta_glob + theta_glob) / (alpha_glob + beta_glob + 1e-8))))  # dtabr
 
-    occ_psd = psd[REGIONS["occipital"]].mean(axis=0)
+    occ_psd = psd[regions["occipital"]].mean(axis=0)
     peak_range = (freqs >= 6) & (freqs <= 14)
     if peak_range.any() and occ_psd[peak_range].max() > 0:
         peak_freq = freqs[peak_range][occ_psd[peak_range].argmax()]
@@ -232,7 +256,8 @@ class ConceptBottleneckShallowCNN(nn.Module):
     """
 
     def __init__(self, n_channels, n_classes=2, n_filters=40, filter_time_length=25,
-                 pool_time_length=75, pool_time_stride=15, dropout=0.5, residual=True):
+                 pool_time_length=75, pool_time_stride=15, dropout=0.5, residual=True,
+                 dead_concept_indices=None):
         super().__init__()
         self.residual = residual
         self.temporal_conv = nn.Conv2d(1, n_filters, kernel_size=(1, filter_time_length))
@@ -247,11 +272,16 @@ class ConceptBottleneckShallowCNN(nn.Module):
             nn.Linear(64, N_CONCEPTS), nn.Sigmoid(),
         )
 
-        # fixed (non-learnable) hard mask for the 4 confirmed-dead concepts (see
-        # DEAD_CONCEPT_INDICES's docstring) -- same mechanism as ConceptBottleneckGNN,
-        # kept in sync so the two backbones are a fair apples-to-apples comparison.
+        # fixed (non-learnable) hard mask for confirmed-dead concepts -- same mechanism
+        # as ConceptBottleneckGNN, kept in sync so the two backbones are a fair
+        # apples-to-apples comparison. Defaults to DEAD_CONCEPT_INDICES (TUH's own
+        # confirmed-dead list, see its docstring) for backward compatibility, but this
+        # is an empirical finding specific to TUH's population -- pass dead_concept_
+        # indices=[] (or a separately-verified list) for a different dataset rather
+        # than assuming TUH's findings transfer.
+        dead_concept_indices = DEAD_CONCEPT_INDICES if dead_concept_indices is None else dead_concept_indices
         dead_mask = torch.ones(N_CONCEPTS)
-        dead_mask[DEAD_CONCEPT_INDICES] = 0.0
+        dead_mask[dead_concept_indices] = 0.0
         self.register_buffer("dead_mask", dead_mask)
 
         if residual:
@@ -374,7 +404,7 @@ class ConceptBottleneckGNN(nn.Module):
     def __init__(self, n_channels, n_classes=2, n_filters_time=40, filter_time_length=25,
                  n_filters_spat=40, pool_time_length=75, pool_time_stride=15,
                  n_hops=2, sfreq=100, beta_band=(13, 30), beta_filters=16,
-                 dropout=0.5, residual=True):
+                 dropout=0.5, residual=True, dead_concept_indices=None):
         super().__init__()
         self.n_channels = n_channels
         self.n_hops = n_hops
@@ -406,12 +436,15 @@ class ConceptBottleneckGNN(nn.Module):
         )
         self.beta_concept_head = nn.Linear(beta_filters, len(BETA_CONCEPT_INDICES))
 
-        # fixed (non-learnable) hard mask for the 4 confirmed-dead concepts (see
-        # DEAD_CONCEPT_INDICES's docstring) -- a learnable per-concept gate was tried
-        # here too, but removed after real runs showed it never moved far from neutral
-        # and measurably hurt beta's own concept-prediction R^2 (see class docstring).
+        # fixed (non-learnable) hard mask for confirmed-dead concepts -- a learnable
+        # per-concept gate was tried here too, but removed after real runs showed it
+        # never moved far from neutral and measurably hurt beta's own concept-
+        # prediction R^2 (see class docstring). Defaults to DEAD_CONCEPT_INDICES
+        # (TUH-specific, see ConceptBottleneckShallowCNN's __init__ for why this
+        # should NOT be assumed for a different dataset without separate evidence).
+        dead_concept_indices = DEAD_CONCEPT_INDICES if dead_concept_indices is None else dead_concept_indices
         dead_mask = torch.ones(N_CONCEPTS)
-        dead_mask[DEAD_CONCEPT_INDICES] = 0.0
+        dead_mask[dead_concept_indices] = 0.0
         self.register_buffer("dead_mask", dead_mask)
 
         if residual:

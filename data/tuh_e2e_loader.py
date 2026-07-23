@@ -4,35 +4,32 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-LABEL_MAP = {"abnormal": 0, "normal": 1}  # same convention as NMT: 0 = pathology first
+LABEL_MAP = {"abnormal": 0, "normal": 1}  # 0 = pathology first, this project's convention throughout
 
-# Same 21-channel order used throughout this project for NMT (data/electrode_positions.py).
+# 21-channel order used throughout this project.
 TARGET_CHANNELS = ["FP1", "FP2", "F3", "F4", "C3", "C4", "P3", "P4", "O1", "O2",
                     "F7", "F8", "T3", "T4", "T5", "T6", "FZ", "PZ", "CZ", "A1", "A2"]
 
 
 class TUHEndToEndDataset(Dataset):
     """
-    TUH Abnormal EEG Corpus counterpart to NMTEndToEndDataset (data/
-    nmt_e2e_loader.py) -- same preprocessing convention (CAR, skip_sec/
-    max_sec windowing, fixed-scale normalization baked into the cache),
-    but a different manifest source and an added channel-selection step:
+    TUH Abnormal EEG Corpus, raw (band-passed) time series only -- CAR,
+    skip_sec/max_sec windowing, fixed-scale normalization baked into the
+    cache (see _load_raw).
 
     - No Labels.csv: label and train/eval split are both encoded directly
       in the directory structure (edf/{train,eval}/{normal,abnormal}/
       01_tcp_ar/*.edf), which is also TUH's own official patient-
       disjoint train/eval partition, not something built here.
-    - TUH's raw channel names are "EEG FP1-REF" style (not NMT's plain
-      "FP1"), and each file has 30 channels -- the 21 target EEG channels
-      used elsewhere in this project, plus EKG/eye-movement/photic-
-      stimulus/annotation channels -- in a file-dependent order. Verified
-      against 80 real sampled files (train/eval x normal/abnormal) that
-      all 21 target channels are present in every file; explicit
-      rename+pick+reorder (unlike NMT, where the stored order already
-      matched) is required so channel index i means the same electrode
-      for every subject.
-    - Native sampling rate varies by file (250/256 Hz seen) -- already
-      handled by resampling to a fixed target sfreq regardless, same as NMT.
+    - TUH's raw channel names are "EEG FP1-REF" style, and each file has
+      30 channels -- the 21 target EEG channels used elsewhere in this
+      project, plus EKG/eye-movement/photic-stimulus/annotation channels
+      -- in a file-dependent order. Verified against 80 real sampled
+      files (train/eval x normal/abnormal) that all 21 target channels
+      are present in every file; explicit rename+pick+reorder is required
+      so channel index i means the same electrode for every subject.
+    - Native sampling rate varies by file (250/256 Hz seen) -- handled by
+      resampling to a fixed target sfreq regardless.
 
     Known limitation, not addressed here: TUH filenames encode
     patient+session+token (e.g. aaaaaeph_s004_t000.edf and
@@ -40,8 +37,7 @@ class TUHEndToEndDataset(Dataset):
     TUH's own train/eval split is patient-disjoint, but the train-pool
     validation split carved out by split_validation (train_utils.py) is
     NOT patient-aware -- the same patient's sessions could land split
-    across train-proper and val within the training pool. Not fixed here
-    to keep this a direct port of the NMT pipeline's existing convention.
+    across train-proper and val within the training pool.
     """
 
     def __init__(self, root_dir, cache_dir, split="train", sfreq=100, bandpass=(0.5, 45),
@@ -90,10 +86,14 @@ class TUHEndToEndDataset(Dataset):
         raw.resample(self.sfreq, npad="auto", verbose=False)
         data = raw.get_data().astype(np.float32)  # volts
 
-        # Common average reference -- see data/nmt_e2e_loader.py's docstring.
+        # Common average reference: subtract the per-timepoint mean across all 21
+        # channels from each channel, putting cross-channel relationships on a
+        # consistent, montage-independent footing.
         data = data - data.mean(axis=0, keepdims=True)
 
-        # Skip skip_sec as burn-in, then take up to max_sec -- same convention as NMT.
+        # Skip skip_sec as burn-in, then take up to max_sec from there -- but only if
+        # the recording actually has more than skip_sec of signal, so short recordings
+        # keep their real (short) signal instead of being reduced to almost nothing.
         want_skip = int(self.skip_sec * self.sfreq)
         skip_samples = want_skip if data.shape[1] > want_skip else 0
         data = data[:, skip_samples:skip_samples + int(self.max_sec * self.sfreq)]
@@ -130,7 +130,8 @@ class TUHEndToEndDataset(Dataset):
 
 
 def collate_tuh_e2e(items):
-    """Same padding/length-tracking convention as data/nmt_e2e_loader.py's collate_e2e."""
+    """Zero-pads every sample in the batch up to the batch's own max length (not a
+    fixed dataset-wide max), tracking each sample's real length in 'lengths'."""
     lengths = torch.tensor([item["raw_eeg"].shape[-1] for item in items], dtype=torch.long)
     T_max = int(lengths.max())
     n_ch = items[0]["raw_eeg"].shape[1]
