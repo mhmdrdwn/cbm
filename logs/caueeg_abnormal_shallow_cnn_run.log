@@ -1,0 +1,64 @@
+Using device: cpu, config: config_caueeg_abnormal_shallow_cnn.yaml
+CAUEEGEndToEndDataset(task=abnormal): 4435 samples (1107 subjects) for split=train
+CAUEEGEndToEndDataset(task=abnormal): 136 samples (136 subjects) for split=val
+CAUEEGEndToEndDataset(task=abnormal): 570 samples (136 subjects) for split=eval
+task=abnormal train=4435 val=136 eval(test)=570
+computing per-channel EEG normalization from train windows...
+  done in 2.7s
+class weights (power=1.5): {0: 0.6756265759468079, 1: 1.7029420137405396}
+epoch   1/50 -- loss 0.5891 train_acc 0.632 val_acc 0.551 val_bal_acc 0.624 (best_bal 0.624 @ep1) [52.8s]
+epoch   2/50 -- loss 0.5539 train_acc 0.664 val_acc 0.566 val_bal_acc 0.630 (best_bal 0.630 @ep2) [51.9s]
+epoch   3/50 -- loss 0.5472 train_acc 0.679 val_acc 0.618 val_bal_acc 0.674 (best_bal 0.674 @ep3) [50.2s]
+epoch   4/50 -- loss 0.5332 train_acc 0.703 val_acc 0.654 val_bal_acc 0.691 (best_bal 0.691 @ep4) [51.6s]
+epoch   5/50 -- loss 0.5282 train_acc 0.699 val_acc 0.581 val_bal_acc 0.614 (best_bal 0.691 @ep4) [51.5s]
+epoch   6/50 -- loss 0.5109 train_acc 0.711 val_acc 0.603 val_bal_acc 0.647 (best_bal 0.691 @ep4) [52.1s]
+epoch   7/50 -- loss 0.5002 train_acc 0.728 val_acc 0.566 val_bal_acc 0.630 (best_bal 0.691 @ep4) [53.0s]
+epoch   8/50 -- loss 0.4888 train_acc 0.730 val_acc 0.618 val_bal_acc 0.642 (best_bal 0.691 @ep4) [52.8s]
+epoch   9/50 -- loss 0.4990 train_acc 0.725 val_acc 0.625 val_bal_acc 0.648 (best_bal 0.691 @ep4) [52.6s]
+epoch  10/50 -- loss 0.4739 train_acc 0.751 val_acc 0.640 val_bal_acc 0.685 (best_bal 0.691 @ep4) [53.3s]
+epoch  11/50 -- loss 0.4836 train_acc 0.739 val_acc 0.632 val_bal_acc 0.648 (best_bal 0.691 @ep4) [54.1s]
+epoch  12/50 -- loss 0.4830 train_acc 0.741 val_acc 0.632 val_bal_acc 0.685 (best_bal 0.691 @ep4) [54.4s]
+epoch  13/50 -- loss 0.4874 train_acc 0.742 val_acc 0.581 val_bal_acc 0.641 (best_bal 0.691 @ep4) [53.7s]
+epoch  14/50 -- loss 0.4708 train_acc 0.749 val_acc 0.647 val_bal_acc 0.632 (best_bal 0.691 @ep4) [54.5s]
+epoch  15/50 -- loss 0.4579 train_acc 0.757 val_acc 0.647 val_bal_acc 0.680 (best_bal 0.691 @ep4) [55.0s]
+epoch  16/50 -- loss 0.4543 train_acc 0.766 val_acc 0.625 val_bal_acc 0.674 (best_bal 0.691 @ep4) [55.0s]
+epoch  17/50 -- loss 0.4498 train_acc 0.768 val_acc 0.654 val_bal_acc 0.659 (best_bal 0.691 @ep4) [55.1s]
+epoch  18/50 -- loss 0.4501 train_acc 0.769 val_acc 0.566 val_bal_acc 0.614 (best_bal 0.691 @ep4) [55.0s]
+epoch  19/50 -- loss 0.4424 train_acc 0.776 val_acc 0.669 val_bal_acc 0.686 (best_bal 0.691 @ep4) [55.1s]
+epoch  20/50 -- loss 0.4488 train_acc 0.765 val_acc 0.581 val_bal_acc 0.646 (best_bal 0.691 @ep4) [55.0s]
+epoch  21/50 -- loss 0.4388 train_acc 0.777 val_acc 0.596 val_bal_acc 0.647 (best_bal 0.691 @ep4) [55.9s]
+epoch  22/50 -- loss 0.4385 train_acc 0.772 val_acc 0.537 val_bal_acc 0.607 (best_bal 0.691 @ep4) [55.5s]
+epoch  23/50 -- loss 0.4363 train_acc 0.769 val_acc 0.632 val_bal_acc 0.653 (best_bal 0.691 @ep4) [55.5s]
+epoch  24/50 -- loss 0.4258 train_acc 0.781 val_acc 0.544 val_bal_acc 0.592 (best_bal 0.691 @ep4) [57.2s]
+epoch  25/50 -- loss 0.4330 train_acc 0.767 val_acc 0.691 val_bal_acc 0.692 (best_bal 0.692 @ep25) [52.0s]
+epoch  26/50 -- loss 0.4299 train_acc 0.786 val_acc 0.551 val_bal_acc 0.613 (best_bal 0.692 @ep25) [52.5s]
+epoch  27/50 -- loss 0.4337 train_acc 0.781 val_acc 0.684 val_bal_acc 0.681 (best_bal 0.692 @ep25) [51.8s]
+epoch  28/50 -- loss 0.4268 train_acc 0.782 val_acc 0.529 val_bal_acc 0.613 (best_bal 0.692 @ep25) [52.1s]
+epoch  29/50 -- loss 0.4131 train_acc 0.792 val_acc 0.551 val_bal_acc 0.608 (best_bal 0.692 @ep25) [53.1s]
+epoch  30/50 -- loss 0.4239 train_acc 0.784 val_acc 0.566 val_bal_acc 0.619 (best_bal 0.692 @ep25) [55.2s]
+epoch  31/50 -- loss 0.4120 train_acc 0.799 val_acc 0.581 val_bal_acc 0.625 (best_bal 0.692 @ep25) [55.8s]
+epoch  32/50 -- loss 0.4126 train_acc 0.797 val_acc 0.581 val_bal_acc 0.636 (best_bal 0.692 @ep25) [56.8s]
+epoch  33/50 -- loss 0.4006 train_acc 0.799 val_acc 0.588 val_bal_acc 0.620 (best_bal 0.692 @ep25) [55.2s]
+epoch  34/50 -- loss 0.4146 train_acc 0.790 val_acc 0.706 val_bal_acc 0.703 (best_bal 0.703 @ep34) [55.7s]
+epoch  35/50 -- loss 0.4121 train_acc 0.793 val_acc 0.574 val_bal_acc 0.630 (best_bal 0.703 @ep34) [55.6s]
+epoch  36/50 -- loss 0.4006 train_acc 0.793 val_acc 0.669 val_bal_acc 0.686 (best_bal 0.703 @ep34) [54.8s]
+epoch  37/50 -- loss 0.4051 train_acc 0.793 val_acc 0.507 val_bal_acc 0.601 (best_bal 0.703 @ep34) [55.5s]
+epoch  38/50 -- loss 0.4306 train_acc 0.775 val_acc 0.588 val_bal_acc 0.641 (best_bal 0.703 @ep34) [55.5s]
+epoch  39/50 -- loss 0.3888 train_acc 0.804 val_acc 0.662 val_bal_acc 0.691 (best_bal 0.703 @ep34) [56.2s]
+epoch  40/50 -- loss 0.3900 train_acc 0.806 val_acc 0.544 val_bal_acc 0.597 (best_bal 0.703 @ep34) [61.0s]
+epoch  41/50 -- loss 0.3865 train_acc 0.811 val_acc 0.654 val_bal_acc 0.654 (best_bal 0.703 @ep34) [57.5s]
+epoch  42/50 -- loss 0.3898 train_acc 0.805 val_acc 0.566 val_bal_acc 0.630 (best_bal 0.703 @ep34) [56.3s]
+epoch  43/50 -- loss 0.4033 train_acc 0.799 val_acc 0.559 val_bal_acc 0.614 (best_bal 0.703 @ep34) [58.3s]
+epoch  44/50 -- loss 0.3971 train_acc 0.803 val_acc 0.603 val_bal_acc 0.657 (best_bal 0.703 @ep34) [57.9s]
+epoch  45/50 -- loss 0.3806 train_acc 0.808 val_acc 0.735 val_bal_acc 0.657 (best_bal 0.703 @ep34) [57.7s]
+epoch  46/50 -- loss 0.3833 train_acc 0.808 val_acc 0.713 val_bal_acc 0.672 (best_bal 0.703 @ep34) [58.1s]
+epoch  47/50 -- loss 0.3758 train_acc 0.816 val_acc 0.647 val_bal_acc 0.680 (best_bal 0.703 @ep34) [58.1s]
+epoch  48/50 -- loss 0.3776 train_acc 0.816 val_acc 0.691 val_bal_acc 0.660 (best_bal 0.703 @ep34) [58.0s]
+epoch  49/50 -- loss 0.3747 train_acc 0.811 val_acc 0.610 val_bal_acc 0.663 (best_bal 0.703 @ep34) [56.0s]
+epoch  50/50 -- loss 0.3761 train_acc 0.815 val_acc 0.632 val_bal_acc 0.664 (best_bal 0.703 @ep34) [55.5s]
+
+=== CAUEEG Shallow-CNN (abnormal, no physics, eval_tta=True) Eval Results ===
+  accuracy: 0.6618
+  f1: 0.6692
+  sensitivity: 0.6778
+  specificity: 0.6304

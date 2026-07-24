@@ -1,4 +1,5 @@
 import contextlib
+import os
 import sys
 
 import numpy as np
@@ -27,8 +28,12 @@ def tee_stdout_to_file(log_path):
     needing to touch any of those individual print calls. Overwrites
     log_path each run, same as the checkpoint .pt files this project already
     overwrites on each run -- the log is "this training run's output," not
-    an accumulating history.
+    an accumulating history. Creates log_path's parent directory (e.g.
+    logs/) if it doesn't exist yet, so this works on a fresh checkout too.
     """
+    log_dir = os.path.dirname(log_path)
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
     with open(log_path, "w") as f:
         original_stdout = sys.stdout
         sys.stdout = _Tee(original_stdout, f)

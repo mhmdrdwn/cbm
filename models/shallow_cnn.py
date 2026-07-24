@@ -7,17 +7,7 @@ class ShallowConvNet(nn.Module):
     """
     Minimal reimplementation of the temporal-conv -> spatial-conv -> square
     -> pool -> log EEG decoding architecture (Schirrmeister et al. 2017,
-    "ShallowFBCSPNet"). The NMT dataset's own reference pipeline
-    (dll-ncai/eeg_pre-diagnostic_screening) benchmarks this same model
-    family as "Shallow-CNN" (72% accuracy on NMT) via the braindecode
-    library; reimplemented natively here to avoid adding that dependency
-    and to run on this project's own data pipeline unchanged.
-
-    Beat every fully-learned cross-channel attention/transformer variant
-    tried on real NMT eval accuracy (75.7% vs 69.7% and worse) in this
-    project's own controlled comparison -- no attention/graph module here,
-    since every attempt at fully-learned cross-channel attention so far has
-    underperformed this simpler model.
+    "ShallowFBCSPNet").
 
     AdaptiveAvgPool2d at the end (not a fixed-size final conv/linear like
     the original) makes this robust to the batch's padded time length

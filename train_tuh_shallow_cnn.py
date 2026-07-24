@@ -152,7 +152,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    with tee_stdout_to_file("tuh_shallow_cnn_run.log"):
+    with tee_stdout_to_file("logs/tuh_shallow_cnn_run.log"):
         print(f"Using device: {device}")
         train_and_evaluate(cfg, device)
 

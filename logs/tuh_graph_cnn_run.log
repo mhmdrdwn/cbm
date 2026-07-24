@@ -1,0 +1,23 @@
+Using device: cpu
+TUHEndToEndDataset: 2717 subjects for split=train
+TUHEndToEndDataset: 276 subjects for split=eval
+train=2174 val=543 eval(test)=276
+class weights (power=1.5): {0: 1.0139598846435547, 1: 0.986357569694519}
+epoch   1/50 -- loss 0.5652 hop_alphas [-0.0272,0.0014] train_acc 0.713 val_acc 0.729 val_bal_acc 0.731 (best_bal 0.731 @ep1) [92.1s]
+epoch   2/50 -- loss 0.4885 hop_alphas [-0.0343,-0.0075] train_acc 0.785 val_acc 0.770 val_bal_acc 0.768 (best_bal 0.768 @ep2) [75.9s]
+epoch   3/50 -- loss 0.4416 hop_alphas [-0.0386,-0.0123] train_acc 0.805 val_acc 0.803 val_bal_acc 0.803 (best_bal 0.803 @ep3) [79.6s]
+epoch   4/50 -- loss 0.4217 hop_alphas [-0.0357,-0.0094] train_acc 0.816 val_acc 0.820 val_bal_acc 0.820 (best_bal 0.820 @ep4) [77.1s]
+epoch   5/50 -- loss 0.4044 hop_alphas [-0.0400,-0.0157] train_acc 0.823 val_acc 0.827 val_bal_acc 0.827 (best_bal 0.827 @ep5) [74.8s]
+epoch   6/50 -- loss 0.4004 hop_alphas [-0.0420,-0.0084] train_acc 0.821 val_acc 0.845 val_bal_acc 0.845 (best_bal 0.845 @ep6) [79.8s]
+epoch   7/50 -- loss 0.3882 hop_alphas [-0.0406,-0.0120] train_acc 0.829 val_acc 0.849 val_bal_acc 0.849 (best_bal 0.849 @ep7) [76.1s]
+epoch   8/50 -- loss 0.3734 hop_alphas [-0.0404,-0.0121] train_acc 0.842 val_acc 0.836 val_bal_acc 0.835 (best_bal 0.849 @ep7) [78.8s]
+epoch   9/50 -- loss 0.3607 hop_alphas [-0.0407,-0.0128] train_acc 0.842 val_acc 0.842 val_bal_acc 0.841 (best_bal 0.849 @ep7) [76.8s]
+epoch  10/50 -- loss 0.3544 hop_alphas [-0.0389,-0.0124] train_acc 0.843 val_acc 0.840 val_bal_acc 0.840 (best_bal 0.849 @ep7) [83.2s]
+epoch  11/50 -- loss 0.3640 hop_alphas [-0.0403,-0.0189] train_acc 0.841 val_acc 0.834 val_bal_acc 0.834 (best_bal 0.849 @ep7) [84.3s]
+epoch  12/50 -- loss 0.3528 hop_alphas [-0.0412,-0.0179] train_acc 0.840 val_acc 0.807 val_bal_acc 0.807 (best_bal 0.849 @ep7) [85.5s]
+epoch  13/50 -- loss 0.3642 hop_alphas [-0.0415,-0.0172] train_acc 0.846 val_acc 0.856 val_bal_acc 0.856 (best_bal 0.856 @ep13) [78.2s]
+epoch  14/50 -- loss 0.3412 hop_alphas [-0.0427,-0.0183] train_acc 0.847 val_acc 0.842 val_bal_acc 0.841 (best_bal 0.856 @ep13) [70.8s]
+epoch  15/50 -- loss 0.3345 hop_alphas [-0.0433,-0.0195] train_acc 0.860 val_acc 0.860 val_bal_acc 0.860 (best_bal 0.860 @ep15) [71.1s]
+epoch  16/50 -- loss 0.3395 hop_alphas [-0.0419,-0.0172] train_acc 0.853 val_acc 0.843 val_bal_acc 0.843 (best_bal 0.860 @ep15) [71.3s]
+epoch  17/50 -- loss 0.3303 hop_alphas [-0.0413,-0.0203] train_acc 0.852 val_acc 0.843 val_bal_acc 0.843 (best_bal 0.860 @ep15) [72.1s]
+epoch  18/50 -- loss 0.3395 hop_alphas [-0.0388,-0.0161] train_acc 0.852 val_acc 0.849 val_bal_acc 0.849 (best_bal 0.860 @ep15) [73.5s]

@@ -1,0 +1,97 @@
+Using device: cpu, config: config_caueeg_abnormal_concept_bottleneck_gnn.yaml
+CAUEEGEndToEndDataset(task=abnormal): 4435 samples (1107 subjects) for split=train
+CAUEEGEndToEndDataset(task=abnormal): 136 samples (136 subjects) for split=val
+CAUEEGEndToEndDataset(task=abnormal): 570 samples (136 subjects) for split=eval
+task=abnormal train=4435 val=136 eval(test)=570
+computing population concept normalization from train subjects...
+  done in 3.0s
+computing per-channel EEG normalization from train windows...
+  done in 1.9s
+class weights (power=1.5): {0: 0.6756265759468079, 1: 1.7029420137405396}
+epoch   1/50 -- cls_loss 0.6359 conc_loss 0.0509 hop_alphas [-0.0410,-0.0218] train_acc 0.516 val_acc 0.588 val_bal_acc 0.636 val_ema 0.636 (best_bal 0.636 @ep1) [92.1s]
+epoch   2/50 -- cls_loss 0.5575 conc_loss 0.0424 hop_alphas [-0.0455,-0.0302] train_acc 0.660 val_acc 0.515 val_bal_acc 0.612 val_ema 0.633 (best_bal 0.636 @ep1) [106.7s]
+epoch   3/50 -- cls_loss 0.5094 conc_loss 0.0389 hop_alphas [-0.0459,-0.0268] train_acc 0.726 val_acc 0.588 val_bal_acc 0.630 val_ema 0.633 (best_bal 0.636 @ep1) [105.7s]
+epoch   4/50 -- cls_loss 0.4803 conc_loss 0.0365 hop_alphas [-0.0477,-0.0312] train_acc 0.732 val_acc 0.610 val_bal_acc 0.647 val_ema 0.634 (best_bal 0.636 @ep1) [103.5s]
+epoch   5/50 -- cls_loss 0.4630 conc_loss 0.0352 hop_alphas [-0.0481,-0.0378] train_acc 0.749 val_acc 0.603 val_bal_acc 0.620 val_ema 0.633 (best_bal 0.636 @ep1) [103.4s]
+epoch   6/50 -- cls_loss 0.4501 conc_loss 0.0337 hop_alphas [-0.0484,-0.0324] train_acc 0.765 val_acc 0.529 val_bal_acc 0.586 val_ema 0.628 (best_bal 0.636 @ep1) [109.1s]
+epoch   7/50 -- cls_loss 0.4230 conc_loss 0.0333 hop_alphas [-0.0487,-0.0415] train_acc 0.778 val_acc 0.603 val_bal_acc 0.647 val_ema 0.630 (best_bal 0.636 @ep1) [104.7s]
+epoch   8/50 -- cls_loss 0.4267 conc_loss 0.0325 hop_alphas [-0.0491,-0.0470] train_acc 0.777 val_acc 0.632 val_bal_acc 0.669 val_ema 0.634 (best_bal 0.636 @ep1) [99.7s]
+epoch   9/50 -- cls_loss 0.4091 conc_loss 0.0336 hop_alphas [-0.0514,-0.0390] train_acc 0.780 val_acc 0.647 val_bal_acc 0.680 val_ema 0.639 (best_bal 0.680 @ep9) [101.7s]
+epoch  10/50 -- cls_loss 0.4061 conc_loss 0.0326 hop_alphas [-0.0484,-0.0423] train_acc 0.795 val_acc 0.647 val_bal_acc 0.675 val_ema 0.642 (best_bal 0.675 @ep10) [102.0s]
+epoch  11/50 -- cls_loss 0.3950 conc_loss 0.0318 hop_alphas [-0.0482,-0.0470] train_acc 0.794 val_acc 0.588 val_bal_acc 0.604 val_ema 0.638 (best_bal 0.675 @ep10) [100.4s]
+epoch  12/50 -- cls_loss 0.3678 conc_loss 0.0322 hop_alphas [-0.0498,-0.0503] train_acc 0.814 val_acc 0.603 val_bal_acc 0.657 val_ema 0.640 (best_bal 0.675 @ep10) [100.6s]
+epoch  13/50 -- cls_loss 0.3683 conc_loss 0.0325 hop_alphas [-0.0467,-0.0481] train_acc 0.811 val_acc 0.618 val_bal_acc 0.647 val_ema 0.641 (best_bal 0.675 @ep10) [101.4s]
+epoch  14/50 -- cls_loss 0.3618 conc_loss 0.0321 hop_alphas [-0.0494,-0.0490] train_acc 0.815 val_acc 0.610 val_bal_acc 0.652 val_ema 0.642 (best_bal 0.675 @ep10) [104.8s]
+epoch  15/50 -- cls_loss 0.3599 conc_loss 0.0322 hop_alphas [-0.0473,-0.0505] train_acc 0.818 val_acc 0.610 val_bal_acc 0.615 val_ema 0.640 (best_bal 0.675 @ep10) [102.9s]
+epoch  16/50 -- cls_loss 0.3613 conc_loss 0.0329 hop_alphas [-0.0471,-0.0513] train_acc 0.817 val_acc 0.610 val_bal_acc 0.642 val_ema 0.640 (best_bal 0.675 @ep10) [102.2s]
+epoch  17/50 -- cls_loss 0.3473 conc_loss 0.0322 hop_alphas [-0.0471,-0.0519] train_acc 0.831 val_acc 0.566 val_bal_acc 0.593 val_ema 0.635 (best_bal 0.675 @ep10) [102.3s]
+epoch  18/50 -- cls_loss 0.3392 conc_loss 0.0324 hop_alphas [-0.0461,-0.0506] train_acc 0.829 val_acc 0.632 val_bal_acc 0.643 val_ema 0.636 (best_bal 0.675 @ep10) [103.5s]
+epoch  19/50 -- cls_loss 0.3229 conc_loss 0.0323 hop_alphas [-0.0483,-0.0517] train_acc 0.841 val_acc 0.610 val_bal_acc 0.621 val_ema 0.634 (best_bal 0.675 @ep10) [103.2s]
+epoch  20/50 -- cls_loss 0.3131 conc_loss 0.0319 hop_alphas [-0.0465,-0.0535] train_acc 0.848 val_acc 0.632 val_bal_acc 0.648 val_ema 0.636 (best_bal 0.675 @ep10) [92.9s]
+epoch  21/50 -- cls_loss 0.3173 conc_loss 0.0324 hop_alphas [-0.0475,-0.0537] train_acc 0.845 val_acc 0.618 val_bal_acc 0.610 val_ema 0.633 (best_bal 0.675 @ep10) [93.2s]
+epoch  22/50 -- cls_loss 0.3047 conc_loss 0.0318 hop_alphas [-0.0484,-0.0528] train_acc 0.848 val_acc 0.625 val_bal_acc 0.621 val_ema 0.632 (best_bal 0.675 @ep10) [97.4s]
+epoch  23/50 -- cls_loss 0.3091 conc_loss 0.0325 hop_alphas [-0.0490,-0.0538] train_acc 0.857 val_acc 0.662 val_bal_acc 0.681 val_ema 0.637 (best_bal 0.675 @ep10) [102.0s]
+epoch  24/50 -- cls_loss 0.3020 conc_loss 0.0330 hop_alphas [-0.0490,-0.0561] train_acc 0.854 val_acc 0.654 val_bal_acc 0.654 val_ema 0.638 (best_bal 0.675 @ep10) [101.1s]
+epoch  25/50 -- cls_loss 0.2857 conc_loss 0.0333 hop_alphas [-0.0506,-0.0554] train_acc 0.866 val_acc 0.662 val_bal_acc 0.649 val_ema 0.639 (best_bal 0.675 @ep10) [103.4s]
+epoch  26/50 -- cls_loss 0.3082 conc_loss 0.0334 hop_alphas [-0.0494,-0.0562] train_acc 0.855 val_acc 0.654 val_bal_acc 0.680 val_ema 0.644 (best_bal 0.680 @ep26) [103.8s]
+epoch  27/50 -- cls_loss 0.2873 conc_loss 0.0334 hop_alphas [-0.0484,-0.0613] train_acc 0.863 val_acc 0.640 val_bal_acc 0.611 val_ema 0.640 (best_bal 0.680 @ep26) [104.4s]
+epoch  28/50 -- cls_loss 0.2795 conc_loss 0.0333 hop_alphas [-0.0496,-0.0577] train_acc 0.869 val_acc 0.618 val_bal_acc 0.647 val_ema 0.641 (best_bal 0.680 @ep26) [99.5s]
+epoch  29/50 -- cls_loss 0.2715 conc_loss 0.0332 hop_alphas [-0.0480,-0.0576] train_acc 0.870 val_acc 0.559 val_bal_acc 0.603 val_ema 0.637 (best_bal 0.680 @ep26) [99.2s]
+epoch  30/50 -- cls_loss 0.2839 conc_loss 0.0333 hop_alphas [-0.0476,-0.0530] train_acc 0.865 val_acc 0.662 val_bal_acc 0.649 val_ema 0.638 (best_bal 0.680 @ep26) [107.9s]
+epoch  31/50 -- cls_loss 0.2699 conc_loss 0.0340 hop_alphas [-0.0494,-0.0574] train_acc 0.870 val_acc 0.625 val_bal_acc 0.637 val_ema 0.638 (best_bal 0.680 @ep26) [108.1s]
+epoch  32/50 -- cls_loss 0.2528 conc_loss 0.0336 hop_alphas [-0.0465,-0.0606] train_acc 0.884 val_acc 0.610 val_bal_acc 0.626 val_ema 0.637 (best_bal 0.680 @ep26) [104.6s]
+epoch  33/50 -- cls_loss 0.2739 conc_loss 0.0342 hop_alphas [-0.0475,-0.0611] train_acc 0.878 val_acc 0.625 val_bal_acc 0.621 val_ema 0.635 (best_bal 0.680 @ep26) [98.9s]
+epoch  34/50 -- cls_loss 0.2588 conc_loss 0.0341 hop_alphas [-0.0484,-0.0568] train_acc 0.879 val_acc 0.632 val_bal_acc 0.632 val_ema 0.635 (best_bal 0.680 @ep26) [97.0s]
+epoch  35/50 -- cls_loss 0.2499 conc_loss 0.0339 hop_alphas [-0.0476,-0.0596] train_acc 0.886 val_acc 0.647 val_bal_acc 0.638 val_ema 0.635 (best_bal 0.680 @ep26) [100.4s]
+epoch  36/50 -- cls_loss 0.2494 conc_loss 0.0343 hop_alphas [-0.0477,-0.0580] train_acc 0.886 val_acc 0.654 val_bal_acc 0.659 val_ema 0.638 (best_bal 0.680 @ep26) [100.9s]
+epoch  37/50 -- cls_loss 0.2504 conc_loss 0.0348 hop_alphas [-0.0498,-0.0582] train_acc 0.891 val_acc 0.669 val_bal_acc 0.654 val_ema 0.639 (best_bal 0.680 @ep26) [100.7s]
+epoch  38/50 -- cls_loss 0.2384 conc_loss 0.0347 hop_alphas [-0.0489,-0.0628] train_acc 0.892 val_acc 0.647 val_bal_acc 0.632 val_ema 0.639 (best_bal 0.680 @ep26) [102.2s]
+epoch  39/50 -- cls_loss 0.2357 conc_loss 0.0348 hop_alphas [-0.0479,-0.0641] train_acc 0.891 val_acc 0.647 val_bal_acc 0.638 val_ema 0.639 (best_bal 0.680 @ep26) [101.7s]
+epoch  40/50 -- cls_loss 0.2405 conc_loss 0.0346 hop_alphas [-0.0459,-0.0625] train_acc 0.888 val_acc 0.625 val_bal_acc 0.653 val_ema 0.640 (best_bal 0.680 @ep26) [104.0s]
+epoch  41/50 -- cls_loss 0.2585 conc_loss 0.0348 hop_alphas [-0.0472,-0.0588] train_acc 0.881 val_acc 0.640 val_bal_acc 0.627 val_ema 0.639 (best_bal 0.680 @ep26) [101.9s]
+epoch  42/50 -- cls_loss 0.2384 conc_loss 0.0346 hop_alphas [-0.0494,-0.0579] train_acc 0.886 val_acc 0.662 val_bal_acc 0.654 val_ema 0.640 (best_bal 0.680 @ep26) [102.7s]
+epoch  43/50 -- cls_loss 0.2473 conc_loss 0.0349 hop_alphas [-0.0488,-0.0618] train_acc 0.893 val_acc 0.654 val_bal_acc 0.675 val_ema 0.644 (best_bal 0.675 @ep43) [102.7s]
+epoch  44/50 -- cls_loss 0.2239 conc_loss 0.0347 hop_alphas [-0.0489,-0.0671] train_acc 0.889 val_acc 0.618 val_bal_acc 0.653 val_ema 0.645 (best_bal 0.653 @ep44) [96.7s]
+epoch  45/50 -- cls_loss 0.2294 conc_loss 0.0348 hop_alphas [-0.0498,-0.0583] train_acc 0.896 val_acc 0.662 val_bal_acc 0.638 val_ema 0.644 (best_bal 0.653 @ep44) [97.7s]
+epoch  46/50 -- cls_loss 0.2267 conc_loss 0.0346 hop_alphas [-0.0460,-0.0623] train_acc 0.896 val_acc 0.625 val_bal_acc 0.621 val_ema 0.642 (best_bal 0.653 @ep44) [98.1s]
+epoch  47/50 -- cls_loss 0.2268 conc_loss 0.0348 hop_alphas [-0.0489,-0.0608] train_acc 0.888 val_acc 0.676 val_bal_acc 0.665 val_ema 0.644 (best_bal 0.653 @ep44) [91.5s]
+epoch  48/50 -- cls_loss 0.2275 conc_loss 0.0346 hop_alphas [-0.0486,-0.0646] train_acc 0.896 val_acc 0.662 val_bal_acc 0.659 val_ema 0.646 (best_bal 0.659 @ep48) [91.9s]
+epoch  49/50 -- cls_loss 0.2197 conc_loss 0.0352 hop_alphas [-0.0482,-0.0606] train_acc 0.897 val_acc 0.676 val_bal_acc 0.671 val_ema 0.648 (best_bal 0.671 @ep49) [96.1s]
+epoch  50/50 -- cls_loss 0.2257 conc_loss 0.0350 hop_alphas [-0.0484,-0.0636] train_acc 0.894 val_acc 0.625 val_bal_acc 0.653 val_ema 0.649 (best_bal 0.653 @ep50) [100.4s]
+
+=== CAUEEG Concept Bottleneck GNN Eval Results (abnormal, eval_tta=True) ===
+  accuracy: 0.6103
+  f1: 0.6205
+  sensitivity: 0.5667
+  specificity: 0.6957
+
+=== Concept Prediction Quality (R^2 per concept, n=570) ===
+  frontal_delta                R2=0.046
+  frontal_theta                R2=0.135
+  frontal_alpha                R2=0.010
+  frontal_beta                 R2=0.135 <- beta
+  temporal_delta               R2=0.074
+  temporal_theta               R2=0.140
+  temporal_alpha               R2=-0.002
+  temporal_beta                R2=0.474 <- beta
+  central_delta                R2=0.049
+  central_theta                R2=0.111
+  central_alpha                R2=0.025
+  central_beta                 R2=0.264 <- beta
+  parietal_delta               R2=0.058
+  parietal_theta               R2=0.113
+  parietal_alpha               R2=0.007
+  parietal_beta                R2=0.717 <- beta
+  occipital_delta              R2=0.046
+  occipital_theta              R2=0.094
+  occipital_alpha              R2=-0.007
+  occipital_beta               R2=0.377 <- beta
+  frontal_alpha_asym           R2=-0.004 <- asym
+  temporal_alpha_asym          R2=-0.010 <- asym
+  posterior_alpha_asym         R2=-0.018 <- asym
+  theta_alpha_ratio            R2=0.081
+  delta_alpha_ratio            R2=-0.448
+  dtabr                        R2=-0.744
+  alpha_peak_freq              R2=0.049
+  alpha_peak_amplitude         R2=-0.309
+  mean R^2 across all 28 concepts: 0.052

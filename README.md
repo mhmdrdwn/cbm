@@ -94,9 +94,11 @@ pip install -r requirements.txt
 Each script reads a YAML config for data paths, model hyperparameters,
 and training settings. Every `train_*.py` script also writes its full
 run output (epoch-by-epoch progress, final eval results) to a `.log`
-file matching its checkpoint's name, in addition to printing to the
-console (`train_utils.tee_stdout_to_file`) -- both are overwritten each
-run, same as the checkpoint.
+file in `logs/` (matching its checkpoint's name), in addition to
+printing to the console (`train_utils.tee_stdout_to_file`) -- both are
+overwritten each run, same as the checkpoint. `logs/` is created
+automatically if it doesn't exist yet, and is gitignored (local run
+output, not source).
 
 ```bash
 # --- TUH (config hardcoded per script) ---
@@ -140,7 +142,8 @@ train_caueeg_graph_cnn.py
 train_caueeg_concept_bottleneck.py
 train_caueeg_concept_bottleneck_gnn.py
 train_utils.py                split_validation (TUH's class-stratified train/val split),
-                               tee_stdout_to_file (run output -> console + .log file)
+                               tee_stdout_to_file (run output -> console + logs/*.log)
+logs/                          run output per script (gitignored, auto-created)
 check_concept_rank_correlation.py       R^2 vs Spearman per concept (TUH)
 tune_tuh_concept_bottleneck_threshold.py  decision-threshold tuning (TUH)
 recalibrate_tuh_concept_bottleneck.py     isotonic recalibration (TUH)

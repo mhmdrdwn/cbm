@@ -27,6 +27,6 @@ training:
   weight_decay: 0.001
   class_weight_power: 1.5
   batch_size: 32
-  early_stop_patience: 15
-  val_ema_decay: 0.9
+  early_stop_patience: null   # disabled -- always trains the full epoch budget, same as
+                                # the other model families.
   seed: 42

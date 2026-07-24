@@ -231,7 +231,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    with tee_stdout_to_file(f"caueeg_{cfg['data']['task']}_concept_bottleneck_gnn_run.log"):
+    with tee_stdout_to_file(f"logs/caueeg_{cfg['data']['task']}_concept_bottleneck_gnn_run.log"):
         print(f"Using device: {device}, config: {config_path}")
         train_and_evaluate(cfg, device)
 

@@ -75,10 +75,8 @@ def train_and_evaluate(cfg, device):
 
     batch_size = t.get("batch_size", 32)
     patience = t.get("early_stop_patience", 15)
-    ema_decay = t.get("val_ema_decay", 0.9)
-    best_val_ema, best_val_acc, best_epoch, epochs_since_best = -1.0, -1.0, -1, 0
+    best_val_acc, best_epoch, epochs_since_best = -1.0, -1, 0
     best_state = None
-    val_ema = None
 
     train_loader = DataLoader(
         train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_caueeg_e2e,
@@ -120,9 +118,8 @@ def train_and_evaluate(cfg, device):
         val_bal_acc = (val_metrics["sensitivity"] + val_metrics["specificity"]) / 2
         model.train()
 
-        val_ema = val_bal_acc if val_ema is None else ema_decay * val_ema + (1 - ema_decay) * val_bal_acc
-        if val_ema > best_val_ema:
-            best_val_ema, best_val_acc, best_epoch, epochs_since_best = val_ema, val_bal_acc, epoch, 0
+        if val_bal_acc > best_val_acc:
+            best_val_acc, best_epoch, epochs_since_best = val_bal_acc, epoch, 0
             best_state = copy.deepcopy(model.state_dict())
         else:
             epochs_since_best += 1
@@ -130,8 +127,7 @@ def train_and_evaluate(cfg, device):
         train_acc = train_correct / n_seen
         print(f"epoch {epoch+1:>3}/{t['epochs']} -- loss {epoch_loss/n_seen:.4f} "
               f"train_acc {train_acc:.3f} val_acc {val_acc:.3f} val_bal_acc {val_bal_acc:.3f} "
-              f"val_ema {val_ema:.3f} (best_bal {best_val_acc:.3f} @ep{best_epoch+1}) "
-              f"[{time.time()-epoch_t0:.1f}s]", flush=True)
+              f"(best_bal {best_val_acc:.3f} @ep{best_epoch+1}) [{time.time()-epoch_t0:.1f}s]", flush=True)
 
         if patience is not None and epochs_since_best >= patience:
             print(f"early stopping (no val improvement for {patience} epochs)", flush=True)
@@ -184,7 +180,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    with tee_stdout_to_file(f"caueeg_{cfg['data']['task']}_shallow_cnn_run.log"):
+    with tee_stdout_to_file(f"logs/caueeg_{cfg['data']['task']}_shallow_cnn_run.log"):
         print(f"Using device: {device}, config: {config_path}")
         train_and_evaluate(cfg, device)
 

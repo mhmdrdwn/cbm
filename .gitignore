@@ -5,4 +5,5 @@ cache/
 data_cache/
 *.pt
 plots/
+logs/
 .DS_Store
