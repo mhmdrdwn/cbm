@@ -1,12 +1,9 @@
-# EEG Abnormality Classification: CNN, Graph-Coupling, and Concept Bottleneck Models
+# EEG Classification with Concept Bottleneck Models
 
 EEG classification on two datasets: the TUH Abnormal EEG Corpus
 (v3.0.0, binary normal/abnormal) and CAUEEG (Chung-Ang University
-Hospital EEG dataset, two ready-made benchmark tasks: binary
-normal/abnormal and 3-class normal/MCI/dementia). Here we compare a plain
-CNN backbone against a graph-coupling extension and a concept
-bottleneck model that routes classification through interpretable
-clinical EEG features.
+Hospital EEG dataset for 3-class normal/MCI/dementia). Here we compare a plain
+CNN backbone against a concept bottleneck model that routes classification through interpretable clinical EEG features.
 
 ## Models
 
@@ -15,12 +12,6 @@ clinical EEG features.
   (Schirrmeister et al. 2017, "ShallowFBCSPNet"). The best-performing
   architecture found in this project; every attention/graph-based
   alternative tried has underperformed it.
-- **`ShallowGNN`** (`models/graph_coupling_cnn.py`) -- multi-hop
-  extension of `ShallowConvNet`: after the temporal conv, each hop
-  recomputes a per-sample cosine-similarity adjacency over the model's
-  own channel features and mixes across it with a learnable per-hop
-  scalar, before the usual spatial collapse. At `n_hops=1` this reduces
-  exactly to a single-hop coupling design.
 - **`ConceptBottleneckShallowCNN`** / **`ConceptBottleneckGNN`**
   (`models/concept_bottleneck.py`) -- CNN or graph-coupling backbone ->
   28 predicted clinical EEG concepts (regional band powers, hemispheric
@@ -38,6 +29,12 @@ clinical EEG features.
   there (Spearman rank correlation not statistically significant) --
   CAUEEG's don't assume that finding transfers, so nothing is masked there
   without separately checking.
+- **`ShallowGNN`** (`models/graph_coupling_cnn.py`) -- multi-hop
+  extension of `ShallowConvNet`: after the temporal conv, each hop
+  recomputes a per-sample cosine-similarity adjacency over the model's
+  own channel features and mixes across it with a learnable per-hop
+  scalar, before the usual spatial collapse. At `n_hops=1` this reduces
+  exactly to a single-hop coupling design.
 
 All models take `n_channels`/`n_classes` as constructor parameters, so
 the same classes serve both datasets and both CAUEEG tasks.
