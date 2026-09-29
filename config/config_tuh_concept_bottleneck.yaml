@@ -15,6 +15,8 @@ model:
   n_filters: 40
   dropout: 0.5
   residual: true
+  checkpoint_name: "tuh_concept_bottleneck"   # -> saved_models/tuh_concept_bottleneck_best_model.pt,
+                                                 # logs/tuh_concept_bottleneck_run.log
 
 training:
   epochs: 50
@@ -25,6 +27,6 @@ training:
   batch_size: 32
   val_frac: 0.2
   early_stop_patience: null
-  val_ema_decay: 0.9   # best-checkpoint selection uses an EMA of val_bal_acc -- kept in
-                         # sync with config_tuh_concept_bottleneck_gnn.yaml's rationale.
+  val_ema_decay: 0.9   # best-checkpoint selection uses an EMA of val_bal_acc, less
+                         # noisy than the raw per-epoch value.
   seed: 42

@@ -1,0 +1,40 @@
+data:
+  root_dir: "/Users/mohamed/Desktop/tuh/isip.piconepress.com/projects/tuh_eeg/downloads/tuh_eeg_abnormal/v3.0.0"
+  cache_dir: "./data_cache/tuh_e2e_cache"
+  concept_cache_dir: "./data_cache/tuh_concepts_cache"
+  sfreq: 100
+  bandpass: [0.5, 45]
+  n_channels: 21
+  skip_sec: 60
+  max_sec: 120
+  clip_uv: 800.0
+  divisor: 22.9
+
+model:
+  n_classes: 2
+  n_filters: 40
+  dropout: 0.5
+  residual: false   # "Plain concept bottleneck" -- classifier sees ONLY the (gated) concept
+                      # vector, no residual escape hatch back to raw backbone features. This
+                      # is the pure-CBM ablation article.tex's Table 1 (tab:params) already
+                      # lists a parameter count for but never reports results for -- see
+                      # ConceptBottleneckShallowCNN's docstring for why the residual matters
+                      # (it's what a reviewer would call the difference between a "hybrid" and
+                      # a "pure" CBM, and hybrids are already known not to lose accuracy the
+                      # way pure bottlenecks do).
+  checkpoint_name: "tuh_concept_bottleneck_plain"   # -> saved_models/tuh_concept_bottleneck_plain_best_model.pt,
+                                                       # logs/tuh_concept_bottleneck_plain_run.log
+                                                       # (distinct from CB-CNN's checkpoint/log, no collision)
+
+training:
+  epochs: 50
+  lr: 0.001
+  weight_decay: 0.001
+  lambda_concept: 0.5   # weight on the concept MSE loss vs classification cross-entropy.
+  class_weight_power: 1.5
+  batch_size: 32
+  val_frac: 0.2
+  early_stop_patience: null
+  val_ema_decay: 0.9   # best-checkpoint selection uses an EMA of val_bal_acc, less
+                         # noisy than the raw per-epoch value.
+  seed: 42

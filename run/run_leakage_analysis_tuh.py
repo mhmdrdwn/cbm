@@ -1,12 +1,23 @@
 """
-Leakage analysis for CB-ShallowCNN and CB-GNN on TUAB (seed-42 checkpoints,
-frozen -- no retraining of the backbone). Replaces the vague Limitations
-claim ("logistic regression on true concepts achieves ~4% lower accuracy
-than CB-GNN, indicating moderate leakage") with a proper decomposition.
+Leakage analysis for CB-ShallowCNN (hybrid, residual=true) on TUAB (seed-42
+checkpoint, frozen -- no retraining of the backbone). Replaces the vague
+Limitations claim ("logistic regression on true concepts achieves ~4%
+lower accuracy, indicating moderate leakage") with a proper decomposition.
 
-For each backbone, extracts frozen (gated_concepts, residual) features for
-every train/eval sample, then trains THREE linear probes (matching the
-model's own nn.Linear(classifier_input, n_classes) classifier exactly, same
+Deliberately NOT run against CB-ShallowCNN-Plain (residual=false, see
+config_tuh_concept_bottleneck_plain.yaml): this analysis exists
+specifically to measure how much signal bypasses the concept bottleneck
+THROUGH THE RESIDUAL PATHWAY, which the Plain variant doesn't have by
+construction (no `residual_proj` attribute at all -- extract_features_shallow
+below would simply crash on it, not silently produce a meaningless
+number). For Plain, "concept-only" accuracy already equals the model's
+own combined/reported accuracy trivially (concepts are its only input),
+so there is nothing left to decompose; see run_pairwise_significance_tuh.py
+and intervention_experiment.py for the comparisons that DO include it.
+
+Extracts frozen (gated_concepts, residual) features for every train/eval
+sample, then trains THREE linear probes (matching the model's own
+nn.Linear(classifier_input, n_classes) classifier exactly, same
 class-weighted cross-entropy loss) on:
   1. concept-only:  gated_concepts alone
   2. residual-only: residual alone
@@ -19,6 +30,11 @@ are mostly explained by concepts (low leakage). If residual-only alone
 already recovers most of combined's accuracy, most of the signal bypasses
 the concept bottleneck (high leakage).
 """
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root, for models/data/utils/train_utils
+
 import copy
 import random
 
@@ -31,10 +47,8 @@ from torch.utils.data import DataLoader, Subset
 
 from data.tuh_e2e_loader import TUHEndToEndDataset
 from data.tuh_concepts_loader import TUHWithConceptsDataset, collate_tuh_concepts
-from models.concept_bottleneck import (
-    ConceptBottleneckShallowCNN, ConceptBottleneckGNN, normalize_concepts,
-)
-from train_utils import split_validation
+from models.concept_bottleneck import ConceptBottleneckShallowCNN, normalize_concepts
+from train_utils import checkpoint_path, split_validation
 from utils.metrics import compute_loso_metrics
 
 PROBE_EPOCHS = 100
@@ -59,49 +73,6 @@ def extract_features_shallow(model, loader, device, band_power_median, band_powe
             concepts = model.concept_predictor(feat)
             gated = concepts * model.dead_mask
             resid = F.relu(model.residual_proj(feat))
-            all_gated.append(gated.cpu())
-            all_resid.append(resid.cpu())
-            all_labels.extend(raw_batch["label"].tolist())
-    return torch.cat(all_gated), torch.cat(all_resid), torch.tensor(all_labels)
-
-
-def extract_features_gnn(model, loader, device, band_power_median, band_power_iqr):
-    model.eval()
-    all_gated, all_resid, all_labels = [], [], []
-    with torch.no_grad():
-        for raw_batch in loader:
-            x = raw_batch["raw_eeg"].to(device)
-            h = model.get_channel_features(x)
-            for k in range(model.n_hops):
-                A = model.per_sample_adjacency(h)
-                h = h + model.hop_alphas[k] * torch.einsum("bij,bjf->bif", A, h)
-                if k < model.n_hops - 1:
-                    h = F.elu(h)
-            h_flat = h.reshape(h.shape[0], -1)
-            main_feat = model.channel_collapse(h_flat)
-            main_feat = model.bn(main_feat)
-            main_feat = F.relu(main_feat)
-            # dropout is off in eval mode
-
-            x_beta = None
-            from models.concept_bottleneck import fft_bandpass, INVERSE_PERM
-            x_beta = fft_bandpass(x, model.sfreq, *model.beta_band)
-            xb = x_beta.unsqueeze(1)
-            xb = model.beta_temporal_conv(xb)
-            xb = model.beta_spatial_conv(xb)
-            xb = model.beta_bn(xb)
-            xb = xb ** 2
-            xb = model.beta_pool(xb)
-            xb = torch.log(torch.clamp(xb, min=1e-6))
-            beta_feat = model.beta_global_pool(xb).flatten(1)
-
-            main_concepts_raw = model.main_concept_head(main_feat)
-            beta_concepts_raw = model.beta_concept_head(beta_feat)
-            concepts_unordered = torch.cat([main_concepts_raw, beta_concepts_raw], dim=-1)
-            concepts = torch.sigmoid(concepts_unordered[:, INVERSE_PERM.to(x.device)])
-            gated = concepts * model.dead_mask
-            resid = F.relu(model.residual_proj(main_feat))
-
             all_gated.append(gated.cpu())
             all_resid.append(resid.cpu())
             all_labels.extend(raw_batch["label"].tolist())
@@ -211,17 +182,9 @@ def main():
 
     results["CB-ShallowCNN"] = run_for_backbone(
         "CB-ShallowCNN", ConceptBottleneckShallowCNN,
-        "tuh_concept_bottleneck_best_model.pt", "config_tuh_concept_bottleneck.yaml",
+        checkpoint_path("tuh_concept_bottleneck_best_model.pt"), "config/config_tuh_concept_bottleneck.yaml",
         extract_features_shallow,
         dict(n_classes=2, n_filters=40, dropout=0.5, residual=True),
-    )
-
-    results["CB-GNN"] = run_for_backbone(
-        "CB-GNN", ConceptBottleneckGNN,
-        "tuh_concept_bottleneck_gnn_best_model.pt", "config_tuh_concept_bottleneck_gnn.yaml",
-        extract_features_gnn,
-        dict(n_classes=2, n_filters_time=40, n_filters_spat=40, n_hops=2, sfreq=100,
-             beta_band=(13, 30), beta_filters=16, dropout=0.5, residual=True),
     )
 
     print(f"\n\n{'='*70}\nSUMMARY\n{'='*70}")

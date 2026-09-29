@@ -1,3 +1,8 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root, for models/data/utils/train_utils
+
 import copy
 import random
 import time
@@ -9,25 +14,18 @@ import yaml
 from torch.utils.data import DataLoader, Subset
 
 from data.tuh_e2e_loader import TUHEndToEndDataset, collate_tuh_e2e
-from models.graph_coupling_cnn import ShallowGNN
-from train_utils import split_validation, tee_stdout_to_file
+from models.shallow_cnn import ShallowConvNet
+from train_utils import checkpoint_path, split_validation, tee_stdout_to_file
 from utils.metrics import compute_loso_metrics
 
 
 def train_and_evaluate(cfg, device):
     """
-    ShallowGNN (models/graph_coupling_cnn.py) on TUH: multi-hop extension
-    of a single-hop coupling design that previously reached 84.42%
-    accuracy, roughly matching the 85.14% plain-CNN baseline. Same data
-    pipeline/cache, plain classification loss -- every hop_alpha gets its
-    only gradient from the classification objective itself.
-
-    Compare against: plain CNN 85.14%, single-hop coupling CNN 84.42%.
-    If more hops helps, this should beat 84.42%; if it doesn't, or gets
-    worse, that's evidence a single hop of learned-feature coupling
-    already captures what's useful here and added depth just adds
-    overfitting risk (same failure mode this project's seen with every
-    "more parameters" attempt).
+    Plain ShallowConvNet on TUH -- no physics loss of any kind, ignores
+    the model's own A_pred output entirely. Electrode-coupling/Jansen-Rit
+    physics losses were tried in an earlier version of this project and
+    every variant underperformed the plain CNN on real held-out accuracy,
+    so this stays with the plain, best-performing configuration.
     """
     m, t, d = cfg["model"], cfg["training"], cfg["data"]
 
@@ -48,24 +46,10 @@ def train_and_evaluate(cfg, device):
     )
     print(f"train={len(train_indices)} val={len(val_indices)} eval(test)={len(eval_ds)}", flush=True)
 
-    model = ShallowGNN(
-        n_channels=d["n_channels"], n_classes=m["n_classes"], n_hops=m.get("n_hops", 2),
-        dropout=m.get("dropout", 0.5),
+    model = ShallowConvNet(
+        n_channels=d["n_channels"], n_classes=m["n_classes"], dropout=m.get("dropout", 0.5),
     ).to(device)
-
-    # hop_alphas excluded from weight_decay -- uniform L2 shrinkage
-    # would pull every hop_alpha back toward 0 each step regardless of
-    # whether the classification loss wants a given hop to matter, making
-    # it impossible to tell "this hop doesn't help" from "weight_decay
-    # never let it find out."
-    hop_alpha_params = [p for n, p in model.named_parameters() if n.startswith("hop_alphas.")]
-    other_params = [p for n, p in model.named_parameters() if not n.startswith("hop_alphas.")]
-    assert len(hop_alpha_params) == m.get("n_hops", 2), \
-        f"expected {m.get('n_hops', 2)} hop_alpha params, found {len(hop_alpha_params)}"
-    optim = torch.optim.Adam([
-        {"params": other_params, "weight_decay": t["weight_decay"]},
-        {"params": hop_alpha_params, "weight_decay": 0.0},
-    ], lr=t["lr"])
+    optim = torch.optim.Adam(model.parameters(), lr=t["lr"], weight_decay=t["weight_decay"])
 
     train_labels = [train_ds.subjects[i]["label"] for i in train_indices]
     class_counts = np.bincount(train_labels, minlength=m["n_classes"]).astype(np.float32)
@@ -129,10 +113,7 @@ def train_and_evaluate(cfg, device):
             epochs_since_best += 1
 
         train_acc = train_correct / n_seen
-        with torch.no_grad():
-            alphas_str = ",".join(f"{a.item():.4f}" for a in model.hop_alphas)
         print(f"epoch {epoch+1:>3}/{t['epochs']} -- loss {epoch_loss/n_seen:.4f} "
-              f"hop_alphas [{alphas_str}] "
               f"train_acc {train_acc:.3f} val_acc {val_acc:.3f} val_bal_acc {val_bal_acc:.3f} "
               f"(best_bal {best_val_acc:.3f} @ep{best_epoch+1}) [{time.time()-epoch_t0:.1f}s]", flush=True)
 
@@ -147,7 +128,7 @@ def train_and_evaluate(cfg, device):
         "model_state": model.state_dict(),
         "best_epoch": int(best_epoch),
         "best_val_bal_acc": float(best_val_acc),
-    }, "tuh_graph_cnn_best_model.pt")
+    }, checkpoint_path("tuh_shallow_cnn_best_model.pt"))
 
     model.eval()
     all_preds, all_labels = [], []
@@ -159,18 +140,14 @@ def train_and_evaluate(cfg, device):
             all_labels.extend(raw_batch["label"].tolist())
 
     metrics = compute_loso_metrics(all_preds, all_labels)
-    print("\n=== TUH ShallowGNN (multi-hop coupling) Eval Results ===")
+    print("\n=== TUH Shallow-CNN (no physics) Eval Results ===")
     for k, v in metrics.items():
         print(f"  {k}: {v:.4f}")
-    with torch.no_grad():
-        print(f"  final hop_alphas: {[round(a.item(), 4) for a in model.hop_alphas]}")
-    print("  (single-hop coupling CNN baseline: accuracy=0.8442; plain CNN baseline: accuracy=0.8514; "
-          "this raw-cosine multi-hop config previously reached accuracy=0.8370)")
     return metrics
 
 
 def main():
-    with open("config_tuh_graph_cnn.yaml") as f:
+    with open("config/config_tuh_shallow_cnn.yaml") as f:
         cfg = yaml.safe_load(f)
 
     seed = cfg["training"]["seed"]
@@ -180,7 +157,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    with tee_stdout_to_file("logs/tuh_graph_cnn_run.log"):
+    with tee_stdout_to_file("logs/tuh_shallow_cnn_run.log"):
         print(f"Using device: {device}")
         train_and_evaluate(cfg, device)
 

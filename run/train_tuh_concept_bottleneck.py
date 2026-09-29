@@ -1,3 +1,8 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root, for models/data/utils/train_utils
+
 import copy
 import random
 import time
@@ -15,7 +20,7 @@ from models.concept_bottleneck import (
     CONCEPT_NAMES, DEAD_CONCEPT_INDICES, N_CONCEPTS, ConceptBottleneckShallowCNN,
     compute_concept_norm, normalize_concepts,
 )
-from train_utils import split_validation, tee_stdout_to_file
+from train_utils import checkpoint_path, split_validation, tee_stdout_to_file
 from utils.metrics import compute_loso_metrics
 
 
@@ -65,6 +70,7 @@ def train_and_evaluate(cfg, device):
     band_power_median, band_power_iqr = band_power_median.to(device), band_power_iqr.to(device)
     print(f"  done in {time.time()-t0:.1f}s", flush=True)
 
+    checkpoint_name = m.get("checkpoint_name", "tuh_concept_bottleneck")
     model = ConceptBottleneckShallowCNN(
         n_channels=d["n_channels"], n_classes=m["n_classes"], n_filters=m.get("n_filters", 40),
         dropout=m.get("dropout", 0.5), residual=m.get("residual", True),
@@ -145,9 +151,8 @@ def train_and_evaluate(cfg, device):
         val_bal_acc = (val_metrics["sensitivity"] + val_metrics["specificity"]) / 2
         model.train()
 
-        # best-checkpoint tracking selects by an EMA-SMOOTHED val_bal_acc -- same
-        # rationale as train_tuh_concept_bottleneck_gnn.py, kept in sync so both
-        # backbones are selected by the same criterion for a fair comparison.
+        # best-checkpoint tracking selects by an EMA-SMOOTHED val_bal_acc, less
+        # noisy than the raw per-epoch value.
         val_ema = val_bal_acc if val_ema is None else ema_decay * val_ema + (1 - ema_decay) * val_bal_acc
         if val_ema > best_val_ema:
             best_val_ema, best_val_acc, best_epoch, epochs_since_best = val_ema, val_bal_acc, epoch, 0
@@ -173,7 +178,7 @@ def train_and_evaluate(cfg, device):
         "model_state": model.state_dict(), "best_epoch": int(best_epoch),
         "best_val_bal_acc": float(best_val_acc),
         "band_power_median": band_power_median.cpu(), "band_power_iqr": band_power_iqr.cpu(),
-    }, "tuh_concept_bottleneck_best_model.pt")
+    }, checkpoint_path(f"{checkpoint_name}_best_model.pt"))
 
     model.eval()
     all_preds, all_labels = [], []
@@ -205,13 +210,14 @@ def train_and_evaluate(cfg, device):
         r2 = r2_score(true_c[:, i], pred_c[:, i])
         r2s.append(r2)
         print(f"  {name:<28} R2={r2:.3f}")
-    print(f"  mean R^2 across all 28 concepts: {np.mean(r2s):.3f}")
+    print(f"  mean R^2 across all {len(CONCEPT_NAMES)} concepts: {np.mean(r2s):.3f}")
 
     return {"metrics": metrics, "concept_r2": dict(zip(CONCEPT_NAMES, r2s))}
 
 
 def main():
-    with open("config_tuh_concept_bottleneck.yaml") as f:
+    config_path = sys.argv[1] if len(sys.argv) > 1 else "config/config_tuh_concept_bottleneck.yaml"
+    with open(config_path) as f:
         cfg = yaml.safe_load(f)
 
     seed = cfg["training"]["seed"]
@@ -221,8 +227,9 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    with tee_stdout_to_file("logs/tuh_concept_bottleneck_run.log"):
-        print(f"Using device: {device}")
+    checkpoint_name = cfg["model"].get("checkpoint_name", "tuh_concept_bottleneck")
+    with tee_stdout_to_file(f"logs/{checkpoint_name}_run.log"):
+        print(f"Using device: {device}, config: {config_path}")
         train_and_evaluate(cfg, device)
 
 

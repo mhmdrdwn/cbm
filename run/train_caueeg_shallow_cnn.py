@@ -1,6 +1,10 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root, for models/data/utils/train_utils
+
 import copy
 import random
-import sys
 import time
 
 import numpy as np
@@ -13,7 +17,7 @@ from data.caueeg_e2e_loader import (
     CAUEEGEndToEndDataset, collate_caueeg_e2e, compute_eeg_channel_norm, normalize_eeg,
 )
 from models.shallow_cnn import ShallowConvNet
-from train_utils import tee_stdout_to_file
+from train_utils import checkpoint_path, tee_stdout_to_file
 from utils.metrics import aggregate_predictions_by_subject, compute_loso_metrics
 
 
@@ -140,7 +144,7 @@ def train_and_evaluate(cfg, device):
         "model_state": model.state_dict(),
         "best_epoch": int(best_epoch),
         "best_val_bal_acc": float(best_val_acc),
-    }, f"caueeg_{task}_shallow_cnn_best_model.pt")
+    }, checkpoint_path(f"caueeg_{task}_shallow_cnn_best_model.pt"))
 
     model.eval()
     all_probs, all_labels_raw, all_sids = [], [], []
@@ -169,7 +173,7 @@ def main():
     # one script, two configs (abnormal/dementia differ in task/n_classes/checkpoint
     # name) -- config path taken from argv rather than hardcoded, unlike this
     # project's other train_*.py scripts, since there's no separate script per task.
-    config_path = sys.argv[1] if len(sys.argv) > 1 else "config_caueeg_abnormal_shallow_cnn.yaml"
+    config_path = sys.argv[1] if len(sys.argv) > 1 else "config/config_caueeg_dementia_shallow_cnn.yaml"
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
 

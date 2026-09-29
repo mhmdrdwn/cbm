@@ -1,6 +1,7 @@
 """
-Concept intervention experiment for the CB-ShallowCNN checkpoint
-(tuh_concept_bottleneck_best_model.pt, TUAB eval accuracy 84.06%).
+Concept intervention experiment, run for BOTH CB-ShallowCNN variants:
+the hybrid (residual=true, tuh_concept_bottleneck_best_model.pt) and the
+Plain pure bottleneck (residual=false, tuh_concept_bottleneck_plain_best_model.pt).
 
 For each "working" concept (R^2 >= 0.10 against its analytically computed
 true value -- recomputed fresh here, not trusted from a stale log), the
@@ -13,16 +14,27 @@ consumes concepts, not raw backbone features, directly (see
 ConceptBottleneckShallowCNN's docstring).
 
 Single-concept correction alone is a weak test -- with every OTHER concept
-and the residual pathway still carrying the model's own (imperfect)
-belief, one corrected input rarely has enough leverage over a linear
-classifier to flip a prediction, especially with correlated concepts
+(and, for the hybrid, the residual pathway) still carrying the model's own
+(imperfect) belief, one corrected input rarely has enough leverage over a
+linear classifier to flip a prediction, especially with correlated concepts
 (e.g. band power across regions) making any one concept partly redundant.
 So this script also runs a PROGRESSIVE multi-concept intervention: concepts
 are ordered by their own R^2 (most reliable first) and corrected k at a
 time simultaneously (k=1,5,10,15,all), which is the standard way CBM
 papers actually test whether concepts matter collectively, not just
 individually.
+
+Running both variants side by side tests a specific prediction: the Plain
+model has NO residual escape hatch, so a correct concept is the classifier's
+ONLY new information -- intervention should move its accuracy at least as
+much as the hybrid's, and if the hybrid's residual is absorbing concept
+errors, the hybrid's intervention gains should be smaller.
 """
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root, for models/data/utils/train_utils
+
 import random
 
 import numpy as np
@@ -34,6 +46,7 @@ from torch.utils.data import DataLoader
 from data.tuh_e2e_loader import TUHEndToEndDataset
 from data.tuh_concepts_loader import TUHWithConceptsDataset, collate_tuh_concepts
 from models.concept_bottleneck import CONCEPT_NAMES, ConceptBottleneckShallowCNN, normalize_concepts
+from train_utils import checkpoint_path
 from utils.metrics import compute_loso_metrics
 
 R2_WORKING_THRESHOLD = 0.10
@@ -65,8 +78,10 @@ def run_pass(model, loader, device, band_power_median, band_power_iqr, intervene
     return preds, labels, np.concatenate(true_c), np.concatenate(pred_c)
 
 
-def main():
-    with open("config_tuh_concept_bottleneck.yaml") as f:
+def run_intervention(variant_label, config_path):
+    print(f"\n\n{'#'*70}\n# {variant_label}  ({config_path})\n{'#'*70}", flush=True)
+
+    with open(config_path) as f:
         cfg = yaml.safe_load(f)
     m, t, d = cfg["model"], cfg["training"], cfg["data"]
 
@@ -89,7 +104,8 @@ def main():
         n_channels=d["n_channels"], n_classes=m["n_classes"], n_filters=m.get("n_filters", 40),
         dropout=m.get("dropout", 0.5), residual=m.get("residual", True),
     ).to(device)
-    ckpt = torch.load("tuh_concept_bottleneck_best_model.pt", map_location=device)
+    checkpoint_name = m.get("checkpoint_name", "tuh_concept_bottleneck")
+    ckpt = torch.load(checkpoint_path(f"{checkpoint_name}_best_model.pt"), map_location=device)
     model.load_state_dict(ckpt["model_state"])
     band_power_median = ckpt["band_power_median"].to(device)
     band_power_iqr = ckpt["band_power_iqr"].to(device)
@@ -168,6 +184,11 @@ def main():
         label = "All working concepts" if k == len(order) else f"Top {k} (by $R^2$)"
         sign = "+" if gain >= 0 else "-"
         print(f"{label} & {acc:.4f} & {sign}{abs(gain):.4f} \\\\")
+
+
+def main():
+    run_intervention("CB-ShallowCNN (hybrid, residual=true)", "config/config_tuh_concept_bottleneck.yaml")
+    run_intervention("CB-ShallowCNN-Plain (pure bottleneck, residual=false)", "config/config_tuh_concept_bottleneck_plain.yaml")
 
 
 if __name__ == "__main__":

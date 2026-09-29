@@ -1,0 +1,523 @@
+\documentclass{iopjournal}
+\usepackage{amsmath}
+\usepackage{subcaption}
+\begin{document}
+
+\articletype{Paper}
+
+\title{EEG Pathology Detection via Clinical Concept
+       Bottleneck Neural Networks}
+
+% This is commented out for the double blind reviews anonymity 
+\author{Mohamed Radwan$^{1}$\orcid{0009-0004-9617-6365},
+        Pedro G. Lind$^{1, 2}$\orcid{0000-0002-8176-666X}
+        and Anis Yazidi$^{1,3,4,*}$\orcid{0000-0001-7591-1659}}
+
+\affil{$^1$Oslo Metropolitan University, Department of Computer Science, 0167 Oslo,Norway}
+ \\
+\affil{$^2$Department of Technology, Kristiania University of Applied Sciences, 0107 Oslo, Norway}
+ \\
+\affil{$^3$Simula Research Laboratory, Numerical Analysis and Scientific Computing, 0164 Oslo, Norway}
+ \\
+\affil{$^4$University of Oslo, Department of Informatics, 0373 Oslo, Norway}
+ \\
+\affil{$^*$Author to whom any correspondence should be addressed.}
+
+\email{anisy@ifi.uio.no}
+
+\keywords{EEG, concept bottleneck models,
+          graph neural networks, EEG pathology detection}
+
+\begin{abstract}
+\textit{Objective.} Deep learning models for electroencephalography (EEG) pathology detection achieve competitive accuracy but offer little clinical transparency or interpretability. The limited transparency limits their deployment in settings where predictions should be auditable and correctable by clinicians. We introduce Concept Bottleneck Neural Networks for EEG pathology detection, routing model predictions through a layer of analytically defined clinical EEG biomarkers.
+\textit{Approach.} The EEG concepts proposed in this study are regional band spectral power, Hemispheric asymmetry, Spectral ratio, and Spectral peak frequency and Amplitude. Those concepts are extracted from EEG literature. Two backbone variants based on shallow Convolutional Neural Networks (CNN) are evaluated on two benchmark datasets. Model stability is assessed across three seeds, statistical significance of concept-driven accuracy change via McNemar's test, concept prediction quality via $R^2$ against the computed concept values, and information leakage through the residual pathway via linear probing.
+\textit{Main results.} Accuracy is within a narrow band ($82.9$--$84.3\%$ mean) with seed-to-seed variation of $1.8$ and $1.2$ percentage points. McNemar's test finds none of the pairwise comparisons between concept-bottleneck and baseline models statistically significant. This indicates that routing predictions through clinical concepts carries no statistically significant evidence of an accuracy difference with the baseline. This is unlike the accuracy degradation reported in the concept bottleneck literature. We added a GNN coupling layer in the model. The CNN based model (CB-CNN) achieves a mean concept $R^2$ of $0.238$, substantially higher than the graph variant (CB-GNN, $0.032$). GNN coupling instead yields higher sensitivity ($0.818$ $\pm$ $0.007$ vs $0.733$ $\pm$ $0.036$ across seeds). A leakage analysis further shows that CB-GNN's non-concept residual pathway alone reaches $75\%$ accuracy, while CB-CNN's residual pathway alone is at ($50\%$) accuracy. This indicates that CB-CNN's classifications are more faithfully concept-driven.
+\textit{Significance.} Concept bottlenecks can be added to EEG pathology detection models with no statistically significant evidence of an accuracy difference while providing concept-level explanations. The two backbone variants offer clinicians a principled choice between a more sensitive, less interpretable operating point (CB-GNN) and a less sensitive, more faithful concept-driven (CB-CNN) than CB-GNN. The source code for the experiments is available at: \href{https://github.com/mhmdrdwn/cbm}{https://github.com/mhmdrdwn/cbm}.
+\end{abstract}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Introduction and Background}
+% ─────────────────────────────────────────────────────────────────────────────
+
+
+Electroencephalography (EEG) provides a non-invasive and cost effective tool used in clinical screening settings for neurodegenerative diseases. Machine Learning has advanced substantially in the analysis of EEG data with convolutional neural networks (CNNs) and graph neural networks (GNNs) achieving competitive performances on large clinical corpora, as demonstrated by the representative studies
+\cite{schirrmeister2017deep, lawhern2016eegnet, demir2021eeg, song2018eeg, klepl2024, roy2019chrononet}. 
+
+Despite the accuracy gains, interpretability of those models remains limited. The interpretation has to be clinically viable which remains a challenge in screening applications. In clinical settings, control is essential for safety and regulatory compliance.
+
+Current EEG interpretability methods are mainly Post-hoc attribution methods such as saliency maps \cite{simonyan2013}, GradCAM \cite{selvaraju2017} and SHAPley values based on \cite{lundberg2017}. Those methods explain decisions of the models after they are made but cannot be verified or corrected at inference time. Using this approach, input features are highlighted using attention weights or learned saliencies \cite{demir2022, zhao2024}. Other studies are breaking EEG signals into frequency band features and using them in building and interpreting GNNs \cite{tawhid2024exploring, radwan2025frequency, klepl2024graph, abadal2025graph}
+
+Concept Bottleneck Models (CBMs) \cite{koh2020} offer a new direction. The internal encoding layers of the model are constrained with a set of predefined human interpretable concepts and the final classifier operates on these concepts. Clinicians can inspect and verify those concepts and intervene in it by correcting a concept at inference without retraining. CBMs have not been applied specifically in the domain of EEG data, to the best of our knowledge. CBMs train models to predict human interpretable concepts as intermediate representations and classify from those concepts. However, these methods are challenging. One of those challenges is the information leakage \cite{havasi2022}. This happens when the concept layer encodes task-relevant information that bypasses the concept definitions \cite{mahinpei2021}.
+
+The EEG domain is particularly well suited for the CBMs method. Clinical EEG concepts such as delta band power, theta/alpha ratio (TAR), and alpha peak frequency are precisely defined analytical quantities. This means that those concepts are computable directly from raw signals using defined neurophysiological formulas. This is important because it provides computed concept labels for every EEG record without any manual annotation which can be an advantage over other applications that require manual concept annotation. 
+
+In this article, we introduce CB-CNN and CB-GNN: CBMs for EEG pathology detection and make the following contributions:
+
+\begin{enumerate}
+
+\item We introduce the first application of Concept Bottleneck Models (CBMs) to EEG pathology detection through clinical EEG biomarkers validated empirically before inclusion in training. The pipeline is evaluated on two clinically separate tasks; Abnormality and dementia EEG datasets. 
+
+\item Across three seeds, we show that routing predictions through clinical concepts carries no statistically significant evidence of an accuracy difference relative to the CNN baseline. We used McNemar's test to highlight the statistical significance of comparisons between the baselines and Concept bottleneck models. This adds advantage in using CBMs in the domain because it is unlike the accuracy degradation typically reported in CBMs literature.
+
+\item We demonstrate that the backbone architecture fundamentally influences concept bottleneck behaviour. Graph coupling improves sensitivity but increases information leakage through the residual pathway and reduces concept prediction fidelity, revealing a trade-off between predictive performance and concept interpretability.
+
+\end{enumerate}
+
+
+\section{Data and Methods}
+
+
+
+\subsection{Datasets}
+\label{sec:dataset}
+Two datasets are used in this study; TUAB dataset is used for the task of abnormality detection while the CAUEEG is used for dementia detection. 
+\subsubsection{Temple University Hospital Abnormal EEG Corpus (TUAB)}
+\hfill \break
+The TUAB dataset \cite{obeid2016} has $2,993$ recordings from $2,329$ subjects, split into $2,717$ training and $276$ test data samples. Labels indicate whether a record shows clear evidence of pathology which is interpreted as abnormal. The test set contains $126$ abnormal and $150$ normal recordings. In this dataset, abnormality means that the record shows clinical pathology, brain dysfunction or neurological disorders. The data samples are recorded using the standard $10-20$ montage. This system has $19$ electrodes plus two reference electrodes (A1, A2). The electrodes are Fp1, Fp2, F7, F3, Fz, F4, F8, T3, C3, Cz, C4, T4, T5, P3, Pz, P4, T6, O1, O2, A1, A2. In these experiments, signals are resampled to $100$ Hz and bandpass filtered between $0.5$ and $45$ Hz using a fourth order Butterworth filter. Clinical concept computation (section~\ref{sec:concepts}) uses only the $19$ electrodes in which we exclude the reference electrodes A1, A2. 
+
+
+\subsubsection{Chung-Ang University Hospital EEG (CAUEEG)}
+\hfill \break
+CAUEEG dataset \cite{kim2023caueeg} was collected at Chung-Ang University Hospital in South Korea. It contains $1,379$ EEG recordings from $1,155$ unique subjects categorized into four clinical groups: $459$ healthy controls (NC), $417$ with mild cognitive impairment (MCI), $311$ with dementia, and $192$ with other neurological conditions. The diagnoses of Dementia in the data samples follow protocols from the National Institute of Neurological and Communicative Disorders and Stroke and Alzheimer’s Disease and Related Disorders Association and the Diagnostic and Statistical Manual of Mental Disorders. MCI subjects meet criteria including subjective memory complaints, intact daily functioning and cognitive deficits. Similar to TUAB, the samples used the $10-20$ system at $200$ Hz and pre-filtered with a $0.5$:$70$ Hz bandpass filter. In these experiments, we evaluate on the CAUEEG-Dementia task which is a three-class classification of NC, MCI, and dementia. This task is more clinically demanding according to the original authors \cite{kim2023caueeg}. Similar to original authors \cite{kim2023caueeg}, our experimental split uses $950$ subjects for training, $119$ for validation, and $118$ for testing. The signals are resampled to $100$ Hz and bandpass filtered between $0.5$ and $45$ Hz.
+
+
+\subsection{Clinical EEG Concepts}
+\label{sec:concepts}
+
+We define $28$ candidate clinical concepts that are computed analytically from raw EEG signals using established neurophysiological formulas. Those concepts are deterministically computed from every EEG record without the need for manual annotation. All concepts are normalized to $[0, 1]$ using the training set. The computed concepts are $20$ band power, three hemispheric asymmetry, three power spectral ratio and two based on peak amplitude and frequency. The details of computing those concepts are shown in the following sections.  
+
+
+\subsubsection{Regional band power ($20$ Concepts)}
+\hfill \break
+Those $20$ concepts are computed from the signals using the band power of the EEG channels after breaking the signals into frequency bands. Band power or Power Spectrum Density (PSD) is calculated per channel using Welch's method \cite{welch1967} with $512$ as the length of each segment. PSD is the average of the squared magnitudes of Short Time Fourier Transform over overlapping segments. The value is transformed to log scale for numerical stability. Five brain regions are used from the EEG $10$-$20$ montage ($19$ used electrodes). Those electrodes are frontal (Fp1, Fp2, F3, F4, Fz, F7, F8), temporal (T3, T4, T5, T6), central (C3, Cz, C4), parietal (P3, Pz, P4) and occipital (O1, O2). The regional band power concept is the mean of PSD across all electrodes in that region. Four frequency bands are used: delta ($0.5$:$4$ Hz), theta ($4$:$8$Hz), alpha ($8$:$13$Hz), and beta ($13$:$30$Hz). This yields $20$ concepts from the five regions and four frequency bands.  
+
+The concepts such as frontal delta and theta have been studied for their clinical relevance \cite{niedermeyer2011}, \cite{lin2021differences}, \cite{nardone2018usefulness}, \cite{tomasello2023neuropsychological}. Reduced occipital alpha was studied as a general marker of cortical dysfunction \cite{klimesch1999}. Lower alpha band activity was found in dementia patients compared to controls in the orbital frontal and temporal lobes \cite{nishida2011differences}. 
+
+
+\subsubsection{Hemispheric asymmetry indices (3 concepts)}
+\hfill \break
+Asymmetry index quantifies the relative difference in alpha power ($P^{\alpha}$) between the right and left hemispheres for a given region:
+\begin{equation}
+  \text{Asymmetry} =
+  \frac{P_\text{right}^{\alpha} - P_\text{left}^{\alpha}}
+       {P_\text{right}^{\alpha} + P_\text{left}^{\alpha}}
+  \label{eq:asymmetry}
+\end{equation}
+Given equation \ref{eq:asymmetry}, values range from $-1$ (left dominance) to $+1$ (right dominance) and zero indicates hemispheric symmetry. Three electrode pairs define the three asymmetry concepts: frontal (F4 vs F3), temporal (T4 vs T3), and posterior (O2 vs O1). Those values are rescaled to $[0, 1]$ before being used as concepts. The study \cite{mizrak2024investigation} reports the difference of hemispheric asymmetry between Alzheimer and control groups. Additionally, Frontal alpha asymmetry is also an established marker studied in depression \cite{davidson2004}, \cite{peng2026altered}, \cite{jia2026hemispheric}.
+
+
+\subsubsection{Spectral ratio markers (3 concepts)}
+\hfill \break
+Spectral ratios quantify the balance between slow and fast waves powers. This is done by dividing the mean of slow waves power over the mean of fast waves power of all electrodes. Three ratios are defined as follows:
+
+\textbf{Theta/Alpha Ratio (TAR):}
+\begin{equation}
+  \text{TAR} =
+  \frac{\bar{P}^{\theta}}{\bar{P}^{\alpha}}
+  \label{eq:tar}
+\end{equation}
+where $\bar{P}^{\theta}$ and $\bar{P}^{\alpha}$ are the global
+mean theta and alpha powers across all $19$ electrodes. Higher TAR indicates increased cognitive load and mental fatigue and is highlighted in Alzheimer compared to Control group \cite{wascher2014frontal}, \cite{borghini2014measuring}, \cite{olugun2024quantitative}. 
+
+\textbf{Delta/Alpha Ratio (DAR):}
+\begin{equation}
+  \text{DAR} =
+  \frac{\bar{P}^{\delta}}{\bar{P}^{\alpha}}
+  \label{eq:dar}
+\end{equation}
+Alzheimer groups showed increases in delta and decreases in alpha waves \cite{jakhar2026abnormal}, \cite{papaliagkas2025role}.
+
+\textbf{Delta+Theta over Alpha+Beta Ratio (DTABR):}
+\begin{equation}
+  \text{DTABR} =
+  \frac{\bar{P}^{\delta} + \bar{P}^{\theta}}
+       {\bar{P}^{\alpha} + \bar{P}^{\beta}}
+  \label{eq:dtabr}
+\end{equation}
+DTABR index measures the balance between the power of slow and fast wave used in the studies including \cite{olivia2024qeeg}, \cite{hussain2022quantitative}. 
+
+
+\subsubsection{Spectral structure concepts (2 concepts)}
+\hfill \break
+\textbf{Alpha peak frequency (APF):}
+This is defined as the dominant oscillation frequency within the alpha band. This is computed as the frequency of maximum power spectral density in the alpha band range for the occipital region. APF is normalized to $[0, 1]$. The occipital dominant rhythm is reduced in dementia and MCI. \cite{klimesch1999}, \cite{radwan2025frequency}, \cite{tawhid2024exploring}.
+
+
+\textbf{Alpha peak amplitude (APA):}
+The maximum PSD value within the alpha range over occipital
+electrodes. As APF tells what frequency is the dominant alpha rhythm at, APA tells how strong it is. This value is log transformed for stability. A strong occipital alpha peak indicates an intact dominant rhythm where the absence indicates abnormality \cite{labonte2023posterior}, \cite{olejarczyk2017eeg}.
+
+
+\subsection{Model Architecture}
+\label{sec:architecture}
+
+We used two neural network backbone variants where both are sharing the same concept bottleneck and classifier structure. Figure \ref{fig:architecture1} illustrates the full model architecture for the CNN backbone.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.95\textwidth, trim=0cm 0cm 0cm 0cm, clip]{cb_cnn_final.png}
+  \caption{CB-CNN architecture. The GNN backbone adds learnable inter-electrode coupling via equation (\ref{eq:gnn}).}
+  \label{fig:architecture1}
+\end{figure}
+
+
+\subsubsection{Neural Networks Backbones}
+\hfill \break
+Following \cite{schirrmeister2017} shallow CNN architecture, we apply temporal convolution ($40$ filters with kernel size $25$), spatial convolution spanning all $n$ electrodes ($40$ filters, kernel size $n \times 1$), batch normalization, square nonlinearity, average pooling and log transformation.  
+
+The other variant extends the CNN with a graph coupling layer (CB-GNN) to model relationships between EEG channels. Before global pooling, the feature vector from each channel is compared with every other channel using cosine similarity, producing an adjacency matrix:
+\begin{equation}
+\mathbf{A} = \hat{\mathbf{H}}\hat{\mathbf{H}}^\top,
+\label{eq:adjacency}
+\end{equation}
+where $\hat{\mathbf{H}}$ denotes the L2 normalized channel hidden state. The adjacency matrix represents the similarity between channel states and is recomputed at each graph propagation step. Channel states are then updated using
+\begin{equation}
+\mathbf{H}^{(k+1)} = \mathbf{H}^{(k)} +
+\alpha_k \mathbf{A}\mathbf{H}^{(k)},
+\label{eq:gnn}
+\end{equation}
+where $\alpha_k$ is a learnable parameter to control the strength of information exchange between channels. We use two propagation steps ($K=2$). The final adjacency matrix is considered as an estimate of the learned functional connectivity.
+
+\subsubsection{Concept bottleneck}
+\label{sec:concept_bottleneck}
+\hfill \break
+Global average pooling over channel features produces a $d$-dimensional
+embedding $\mathbf{z}$, which a two-layer $\mathrm{MLP}$ (Linear, ReLU,
+Dropout, Linear) maps to $N_c$ predicted concept values between $0$ and $1$:
+\begin{equation}
+  \hat{\mathbf{c}} = \sigma(\mathrm{MLP}(\mathbf{z})) \in [0,1]^{N_c}
+  \label{eq:concepts}
+\end{equation}
+
+The classifier combines these concept predictions with a residual pathway:
+
+
+\begin{equation}
+  \hat{y} = \mathrm{Linear}([\hat{\mathbf{c}};\, \mathrm{ReLU}(W_r\mathbf{z})])
+  \label{eq:classifier}
+\end{equation}
+
+where $\mathrm{ReLU}(W_r\mathbf{z})$ is the residual projection. Parameter counts for all variants are reported in table~\ref{tab:params}.
+
+\begin{table}[h]
+\caption{Parameter counts for all model variants.}
+\centering
+\begin{tabular}{l r}
+\hline
+Model & Parameters \\
+\hline
+CNN baseline (No concept) & 34,050 \\
+GNN (No concept)             & 35,640 \\
+Plain concept bottleneck  & 36,290 \\
+CB-CNN                      & 37,190 \\
+CB-GNN                             & 38,780 \\
+\hline
+\end{tabular}
+\label{tab:params}
+\end{table}
+
+
+\subsection{Concept Validation}
+\label{sec:validation}
+
+As we use the model to predict those precomputed $28$ concepts (section \ref{sec:concept_bottleneck}), the coefficient of determination ($R^2$) between model predicted and the computed concept values on a held-out validation subset is measured. Here $R^2$ measures how well the concept predictor (the MLP inside the model) can predict the analytically computed concept value from the model learned features. The use of $R^2$ validates the candidate concepts. Only concepts with $R^2 \geq 0.10$ are used as supervised targets. This step is essential to enhance the numerical stability of concept targets and avoid corrupting the shared gradient in model training. 
+
+\subsection{Training}
+
+The models in these experiments are trained with the joint loss:
+\begin{equation}
+  \mathcal{L} = \mathcal{L}_{\mathrm{cls}}(\hat{y}, y) +
+                \lambda\,\mathcal{L}_{\mathrm{concept}}(\hat{\mathbf{c}},
+                \mathbf{c})
+  \label{eq:loss}
+\end{equation}
+where $\mathcal{L}_{\mathrm{cls}}$ is cross entropy loss and $\mathcal{L}_{\mathrm{concept}}$ is Mean Square Error (MSE) loss between predicted and the computed concept values, and $\lambda = 0.5$. In these experiments, the Adam optimizer is used with learning rate $10^{-3}$ and weight decay $10^{-4}$ and cosine annealing. Gradient clipping is also applied to limit the exploding gradients. All experiments use seeds $42$, $43$ and $44$ to test model stability.
+
+
+\section{Results}
+In this section, we present the experimental results. Section \ref{sec:results_classification} reports the classification performance of the used models. Section \ref{sec:significance} evaluates the stability of these models across different random seeds and assesses the statistical significance of performance differences. Section \ref{sec:concept_quality} reports the concept prediction quality by comparing the predicted with the precomputed concepts using the coefficient of determination ($R^2$). Section \ref{sec:intervention} evaluates concept intervention strategy by replacing predicted concepts with their ground-truth values to assess their influence on the classification decisions. Finally, Section \ref{sec:leakage} quantifies information leakage through the residual pathway by comparing the predictive contributions of the concept and residual representations.
+
+\subsection{Classification performance}
+\label{sec:results_classification}
+The classification performance of the used models is reported in Table~\ref{tab:classification} on the evaluation datasets (TUAB binary and CAUEEG Dementia prediction tasks). The four TUAB models mean accuracies are between $82.9$ and $84.3\%$ (table~\ref{tab:classification}). Using different seeds in training, all four TUAB variants mean accuracies fall within a $1.4$ percentage point band. Several models have been applied on the TUAB dataset and achieved accuracy between $77.9\%$ and $86.6\%$ depending on the model size and architecture type \cite{kiessner2023extended}. Similarly, using CAUEEG-Dementia, mean accuracies are close within $1.2$, $0.6$ percentage point for each variant. The CNN baseline ($0.605 \pm 0.011$) is numerically highest while CB-CNN is behind ($0.593 \pm 0.024$). The results from CAUEEG align with the previous results from the original authors of the dataset \cite{kim2023caueeg} where the achieved accuracy is $54.27\%$ using a simple CNN model. 
+
+
+\begin{table*}[h]
+\caption{Classification performance on TUAB (binary) and CAUEEG-Dementia (three-class) with mean $\pm$ std across three seeds ($42$, $43$, $44$).}
+\label{tab:classification}
+\centering
+
+\begin{subtable}{\textwidth}
+\centering
+\begin{tabular}{l ccccc}
+\hline
+Model & Acc & F1 & Sens & Spec & $R^2$ \\
+\hline
+CNN
+  & 0.843$\pm$0.006 & 0.842$\pm$0.006 & 0.786$\pm$0.011 & 0.891$\pm$0.019 & --- \\
+CB-CNN
+  & 0.829$\pm$0.009 & 0.826$\pm$0.008 & 0.733$\pm$0.036 & 0.909$\pm$0.035 & 0.238 \\
+\hline
+GNN
+  & 0.832$\pm$0.005 & 0.831$\pm$0.004 & 0.781$\pm$0.020 & 0.876$\pm$0.022 & --- \\
+CB-GNN
+  & 0.833$\pm$0.018 & 0.833$\pm$0.018 & 0.818$\pm$0.007 & 0.847$\pm$0.034 & 0.032 \\
+\hline
+\end{tabular}
+\caption{TUAB}
+\label{tab:classification_tuab}
+\end{subtable}
+
+\vspace{1em}
+
+\begin{subtable}{\textwidth}
+\centering
+\begin{tabular}{l ccccc}
+\hline
+Model & Acc & F1 & Sens & Spec & $R^2$ \\
+\hline
+CNN
+  & 0.605$\pm$0.011 & 0.606$\pm$0.013 & 0.603$\pm$0.012 & 0.802$\pm$0.005 & --- \\
+CB-CNN
+  & 0.593$\pm$0.024 & 0.596$\pm$0.024 & 0.599$\pm$0.019 & 0.797$\pm$0.010 & 0.362 \\
+\hline
+GNN
+  & 0.565$\pm$0.035 & 0.563$\pm$0.030 & 0.574$\pm$0.036 & 0.781$\pm$0.017 & --- \\
+CB-GNN
+  & 0.559$\pm$0.021 & 0.559$\pm$0.022 & 0.557$\pm$0.018 & 0.776$\pm$0.011 & 0.053 \\
+\hline
+\end{tabular}
+\caption{CAUEEG-Dementia}
+\label{tab:classification_caueeg}
+\end{subtable}
+
+\end{table*}
+
+\subsection{Statistical significance}
+\label{sec:significance}
+
+Table~\ref{tab:mcnemar} reports the results of applying McNemar's test for the pair of models. Here we used several pairwise comparison groups to test the choice of the models. These results are shown in three groups of comparisons to answer the statistical significance of components. The first is the concept effect with a fixed backbone (CB-CNN $-$ CNN, CB-GNN $-$ GNN). This aims to answer whether adding the concepts have effect on the accuracy. The second is architecture effect with a fixed concept (GNN $-$ CNN, CB-GNN $-$ CB-CNN). This effect answers whether the GNN backbone changes accuracy while holding the concept usage fixed. Lastly, the comparisons that change both factors at once (CB-GNN $-$ CNN, CB-CNN $-$ GNN). In this study, concept effect pairs are the ones that are directly aligned with this paper's main question. Each is tested with McNemar's exact test and a paired bootstrap $95\%$ confidence interval ($10,000$ resamples) on the accuracy difference using per-sample correct/incorrect outcomes on the TUAB and CAUEEG evaluation sets.
+
+
+\begin{table*}[h]
+\caption{Pairwise significance testing on TUAB and CAUEEG datasets. pairwise comparisions are grouped by which factor differ between the two models compared. No statistically significant difference in the disagreements of the models in any group.}
+         
+\begin{subtable}{\textwidth}
+\centering
+\caption{TUAB}
+\centering
+\begin{tabular}{l c c}
+\hline
+Comparison & 95\% CI on difference & $p$ value \\
+\hline
+\multicolumn{3}{l}{\textit{Concept effect (same backbone)}} \\
+CB-CNN $-$ CNN     & [$-$0.044, +0.022] & 0.664 \\
+CB-GNN $-$ GNN     & [$-$0.011, +0.054] & 0.263 \\
+\hline
+\multicolumn{3}{l}{\textit{Architecture effect (same concept)}} \\
+GNN $-$ CNN        & [$-$0.044, +0.015] & 0.455 \\
+CB-GNN $-$ CB-CNN  & [$-$0.018, +0.054] & 0.424 \\
+\hline
+\multicolumn{3}{l}{\textit{Confounded (both factors differ)}} \\
+CB-GNN $-$ CNN     & [$-$0.025, +0.040] & 0.832 \\
+CB-CNN $-$ GNN     & [$-$0.036, +0.044] & 1.000 \\
+\hline
+\end{tabular}
+\label{tab:mcnemar}
+\end{subtable}
+
+\vspace{1em}
+\begin{subtable}{\textwidth}
+\caption{CAUEEG-Dementia}
+\centering
+\begin{tabular}{l c c}
+\hline
+Comparison & 95\% CI on difference & $p$ value \\
+\hline
+\multicolumn{3}{l}{\textit{Concept effect (same backbone)}} \\
+CB-CNN $-$ CNN     & [$-$0.076, +0.093] & 1.000 \\
+CB-GNN $-$ GNN     & [$-$0.068, +0.093] & 1.000 \\
+\hline
+\multicolumn{3}{l}{\textit{Architecture effect (same concept)}} \\
+GNN $-$ CNN        & [$-$0.178, +0.017] & 0.176 \\
+CB-GNN $-$ CB-CNN  & [$-$0.186, +0.034] & 0.222 \\
+\hline
+\multicolumn{3}{l}{\textit{Confounded (both factors differ)}} \\
+CB-GNN $-$ CNN     & [$-$0.161, +0.025] & 0.215 \\
+CB-CNN $-$ GNN     & [$-$0.017, +0.186] & 0.143 \\
+\hline
+\end{tabular}
+\label{tab:mcnemar_caueeg}
+\end{subtable}
+
+\end{table*}
+
+
+Table~\ref{tab:mcnemar} shows that the $95\%$ confidence intervals for the differences in accuracy are centered close to zero using the TUAB dataset. Furthermore, all p-values exceed the significance threshold of $\alpha = 0.05$. Therefore, we fail to reject the null hypothesis, indicating no statistically significant differences between any pair of models in all pairs of comparisons. On CAUEEG dataset (table~\ref{tab:mcnemar_caueeg}), this gives wider intervals reflecting the smaller size of the evaluation set which is $118$ subjects. In CAUEEG-Dementia task, no pairwise comparison was found significant. 
+
+
+
+\subsection{Concept prediction quality}
+\label{sec:concept_quality}
+
+In order to evaluate the concept prediction quality, we used the models to predict those concepts as a regression problem. Figure~\ref{fig:r2heatmap} reports $R^2$ between the model predicted and actual computed concept values for both backbone variants on the TUAB and CAUEEG evaluation sets. Several observations emerge from the results. First, delta, theta, and beta concepts are consistently positive across both backbones and both datasets ($R^2 = 0.10$--$0.553$ on TUAB, $0.10$--$0.686$ on CAUEEG) with one exception. Frontal delta turns slightly negative under the GNN backbone on CAUEEG ($R^2=-0.004$). 
+
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{r2_heatmap_1.png}
+\caption{Concept prediction $R^2$ across the models variants and datasets. Colour encodes $R^2$ from dark red (positive, reliable), white (zero) and dark blue (negative, unreliable). GNN coupling consistently degrades concept quality relative to the CNN backbone.}
+\label{fig:r2heatmap}
+\end{figure}
+
+
+Second, alpha concepts depend on both dataset and backbone. On TUAB
+with the CNN backbone, alpha $R^2$ are $0.454$ and $0.463$ for central and occipital regions. $R^2$ for frontal, temporal and parietal alpha are near zero or negative ($-0.07$ to $-0.12$). This means that Alpha is region dependent. Under the GNN backbone, all five TUAB alpha concepts are poor as they collapse toward zero. On CAUEEG, alpha has shown to be a strong predictor across all five regions for the CNN backbone ($R^2 = 0.44$--$0.71$). For the GNN backbone, alpha concepts collapse  near zero ($R^2=0.04$--$0.06$). 
+
+Third, GNN coupling consistently degrades concept quality. The CNN backbone achieves higher $R^2$ than the GNN backbone for $21$ of $28$ concepts on TUAB and $27$ of $28$ on CAUEEG.
+
+
+Finally, asymmetry and ratio concepts fail across all experiments in both datasets and backbones. In these experiments, asymmetry indices ($R^2 \approx 0$) lack validated developmental norms across the full age range in TUAB, and sample size within each diagnostic group is insufficient on CAUEEG. DAR and DTABR fail due to the instability of alpha power as a denominator in the mixed age populations.
+
+\subsection{Concept intervention experiment}
+\label{sec:intervention}
+
+In the experiments, we replaced model predictions of concepts with their actual computed ground truth computed values at inference and measured the resulting change in TUAB test accuracy. We noticed that single concept intervention where we replace one concept at a time is not enough to change the model decision. Furthermore, we used group intervention where we correct several concepts simultaneously ordered by each concept's own $R^2$ to test whether concepts matter collectively rather than individually. Table~\ref{tab:intervention} reports single-concept results for CB-CNN (baseline accuracy $0.841$). No single concept improves accuracy. In the experiments, $11$ single concepts leave it unchanged and the remaining $9$ reduce it slightly. Temporal theta has higher cost on accuracy ($0.841 \to 0.833$). CB-GNN shows the same qualitative pattern applies when we replace $16$ concepts leave accuracy unchanged or reduce it by $-0.004$. This means correcting one concept in isolation is not informative for either backbone.
+
+\begin{table}[h]
+\caption{Single-concept intervention accuracy on the TUAB test set for CB-CNN (baseline $0.841$ with no intervention). Only working concepts ($R^2 \geq 0.10$). No single-concept corrections change the model predictions and no improvement in accuracy.}
+\centering
+\begin{tabular}{p{6.8cm} c c}
+\hline
+Concepts replaced & Acc. & Gain \\
+\hline
+Temporal beta, central theta, central beta, parietal delta,
+parietal theta, parietal beta, occipital theta, occipital alpha,
+occipital beta, TAR, alpha peak freq (11 concepts) & 0.841 & +0.000 \\
+Frontal delta, frontal theta, frontal beta, temporal delta,
+central delta, central alpha, occipital delta, DAR (8 concepts)
+& 0.837 & $-$0.004 \\
+Temporal theta (1 concept) & 0.833 & $-$0.007 \\
+\hline
+\end{tabular}
+\label{tab:intervention}
+\end{table}
+
+Table~\ref{tab:intervention_progressive} reports the gradual intervention approach where we correct an increasing number of concepts for both backbones. We noticed that correcting all $20$ CB-CNN concepts at once yields a small net accuracy gain ($0.841 \to 0.844$), while correcting all $17$ working CB-GNN concepts at once yields a small accuracy loss ($0.859 \to 0.855$).
+
+\begin{table}[h]
+\caption{Gradual group intervention where an increasing number of concepts (ordered by each concept's own $R^2$) are corrected simultaneously. The last row collapses top $15$ through all working, which give identical accuracy for both backbones.}
+\centering
+\begin{tabular}{l cc cc}
+\hline
+& \multicolumn{2}{c}{CB-CNN} & \multicolumn{2}{c}{CB-GNN} \\
+Concepts corrected & Acc. & Gain & Acc. & Gain \\
+\hline
+Top 1           & 0.833 & $-$0.007 & 0.859 & +0.000 \\
+Top 5            & 0.837 & $-$0.004 & 0.855 & $-$0.004 \\
+Top 10           & 0.837 & $-$0.004 & 0.859 & +0.000 \\
+Top 15  & 0.844 & +0.004 & 0.855 & $-$0.004 \\
+\hline
+\end{tabular}
+\label{tab:intervention_progressive}
+\end{table}
+
+
+\subsection{Leakage analysis}
+\label{sec:leakage}
+
+As explained in the above mentioned residual pathway (equation~\ref{eq:classifier}) lets the classifier use backbone features beyond the predicted concepts. This may lead to leakage of the task relevant features around the concept layer and make the predictions less driven by the concepts. To quantify this directly, we freeze each trained backbone (with seed $42$) and train three linear probes on its extracted features. All training is done with identical architecture and training parameters but differing only in input: concept-only, residual-only and both combined. If concept-only accuracy is roughly around the combined accuracy, we can conclude that the classifications are driven by concepts. If residual only accuracy is above chance, a meaningful share of the signal bypasses the concept bottleneck.
+
+\begin{table}[h]
+\caption{Leakage analysis on TUAB (with seed $42$, frozen backbones, fresh linear probes on extracted features). CB-ShallowCNN's residual pathway alone is at chance level ($50\%$, binary task); CB-GNN's reaches $75.4\%$, indicating substantially more of its classification signal bypasses the concept bottleneck.}
+\centering
+\begin{tabular}{l c c c}
+\hline
+Backbone & Concept-only & Residual-only & Combined \\
+\hline
+CB-CNN & 0.837 & 0.500 & 0.837 \\
+CB-GNN        & 0.797 & 0.754 & 0.844 \\
+\hline
+\end{tabular}
+\label{tab:leakage}
+\end{table}
+
+Table \ref{tab:leakage} highlights that CB-CNN concept-only probe achieves $0.837$ which already matches the combined probe $0.837$. The residual-only probe achieves $0.500$ accuracy which means the residual pathway carries no independent signal. Here, CB-CNN's classifications residual representation provides no measurable independent predictive signal beyond the concept representation. For CB-GNN, concept-only probe is $0.797$, residual-only $0.754$ and the combined probe is $0.844$. This means that a substantial share of CB-GNN's classification signal bypasses the concept bottleneck entirely. This is consistent with CB-GNN's lower concept quality (section~\ref{sec:concept_quality}). This means that with less reliable concepts to route the model, the joint training objective pushes more of the classification burden onto the residual blackbox layers. 
+
+
+\section{Discussion}
+
+The main finding of this study is the introduction of a clinical concept bottleneck in the domain of EEG. Here, we used different seeds to train all four TUAB models, and the mean accuracies fall within a $1.4$ percentage point. Using the CAUEEG dataset, mean accuracies across the three seeds are similarly close for the two variants ($1.2$, $0.6$ percentage points). 
+
+Furthermore, across the three seeds, CB-CNN and CB-GNN models match the black-box CNN baseline on the TUAB and CAUEEG without a statistically significant reduction in performance (section~\ref{sec:significance}). In the CBM literature, it is shown that accuracy reduction are expected cost of concept interpretability \cite{koh2020, mahinpei2021}. Here, using the defined clinical concepts has limited effect on the accuracy. In section~\ref{sec:significance}, the comparisons aimed to isolate the concept effect which shows that the accuracy differences are close to zero on a fixed backbone. We argue that these observations align directly with this paper's claim that the use of concepts has no significant accuracy cost. Therefore, we claim that the concept based models match the baseline accuracy while additionally providing concept level explanations.
+
+However, as explained in section~\ref{sec:leakage}, adding full concept-level explanations, for CB-CNN specifically, the residual pathway bypasses the concepts entirely. When we strip away the concepts and let a classifier see only the residual pathway, it does no better than a coin flip ($50\%$ on this binary task). This means the residual pathway is not contributing and the classifier's real decision-making is, in practice, based entirely on the concepts for the CNN variant. This means CB-CNN's concept-level explanations are relatively more trustworthy than CB-GNN.
+
+\subsection{Two model variants}
+
+The use of the two backbone variants offers varied choices to understand the concept contributions through the choice in terms of both performance and interpretability. Performance shows that it does not differ significantly between both used datasets (section~\ref{sec:significance}). Furthermore, using the McNemar's test, we find no pairwise difference significant on either dataset (tables~\ref{tab:mcnemar}, \ref{tab:mcnemar_caueeg}). The concept-bottleneck carries no statistically significant evidence of an accuracy difference. At the same time it does not reliably exceed the black-box baseline either. 
+
+It is noticed that CB-GNN achieves higher sensitivity ($0.818$ $\pm$ $0.007$) across seeds than CB-CNN's ($0.733 \pm 0.036$) using TUAB dataset. This is important for the task using prediction models for medical screening where sensitivity is important. On CAUEEG-Dementia, GNN and CB-GNN accuracies are lower than the baseline CNN in all seeds ($0.565 \pm 0.035$ and $0.559 \pm 0.021$ vs the baseline's $0.605$ $\pm 0.011$). 
+
+Regarding the concept quality, GNN coupling also reduces it to mean $R^2=0.032$ (CB-GNN) on TUAB. In this case, CB-CNN is preferable as it has substantially better concept quality (mean CB-CNN $R^2$ $0.238$ vs mean CB-GNN $0.032$). Furthermore, per the leakage analysis (section~\ref{sec:leakage}), its residual pathway carries no independent signal (Accuracy is $50\%$) while CB-GNN's carries a substantial contribution (Accuracy is $75.4\%$). The leakage analysis (section~\ref{sec:leakage}) shows CB-GNN relies more on its non-concept residual pathway than CB-CNN does which is consistent with its lower concept quality. 
+
+%The concepts have to be learnable from the model representations for it to working. We noticed that delta and theta concepts align naturally with the CNN's band power inductive bias
+
+
+\subsection{Age heterogeneity and concept validity}
+\label{sec:discussion_age}
+
+In this study, we noticed that Alpha power, asymmetry indices, and derived ratio markers consistently fail as concept targets ($R^2 < 0.10$) on both backbones. The values of $R^2$ near zero indicate the backbone's learned representations do not encode information about this concept. However, that does not mean that the biomarker is clinically uninformative. One possible cause of this observation is the age composition of each dataset. TUAB has a wide age distribution as young as $2$ years of age to as old as $88$ \cite{obeid2016}. TUAB contains paediatric subjects for whom alpha power is absent or low. In children under $12$ years old, alpha power is developmentally low or absent which makes the theta/alpha ratio high or invalid even in healthy individuals and asymmetry indices lack validated reference ranges. CAUEEG-Dementia consists of adults and elderly subjects for whom alpha power makes it reliably learnable. This also connects to the lower quality of concepts of symmetry/Asymmetry in the section \ref{sec:concept_quality}. The symmetry and asymmetry assume a stable alpha waves so that it can compare left versus right spectral power which makes it noisy in this case. 
+
+
+\subsection{Limitations}
+
+The $28$ candidate concepts do not cover all pathologically relevant EEG features for the abnormal pathologies. Many candidate concepts can be proposed here including functional connectivity concepts, network features such as node degrees, global and local efficiency, clustering coefficient and complexity \cite{10.1007/978-981-95-9575-4_2}. As EEG has been extensively used in neurological research, a comprehensive list of candidate biomarkers can be implemented here which could be a future direction. This may help to better capture the inter-regional coupling that the GNN backbone currently struggles to learn.
+
+Section~\ref{sec:leakage} shows CB-CNN's residual pathway carries no independent signal, while CB-GNN's does ($75.4\%$) indicates a substantial share of CB-GNN classification signal bypasses the
+concept bottleneck entirely. Reducing the residual dimension would
+likely reduce this leakage with a cost in accuracy. This tradeoff is not
+explored here. Future work directions can be used to handle the this leakage such as \cite{galliamov2026conceptsinformationbottleneckmodels} that integrates a penalization or regularization layer into model.
+
+Finally, results are reported on two datasets (TUAB, CAUEEG) spanning different pathologies and age ranges. Further validation on additional independent corpora for certain pathologies such as Dementia and Alzheimer would strengthen generalization claims in this study.
+
+
+\section{Conclusion}
+
+We have presented Concept Bottleneck Models (CBMs) for interpretable machine learning for EEG pathology detection. The predictions of CBMs are applied through analytically defined clinical EEG biomarkers derived from previous literature. This enables concept level explanations and clinician intervention and overcomes the need for post-hoc approximation.
+
+Across three independent seeds on TUAB, neither variant differs significantly in accuracy from a black-box CNN baseline (McNemar's $p>0.05$ for all pairwise comparisons as in section~\ref{sec:significance}), demonstrating that concept supervision here carries no statistically significant evidence of an accuracy difference between the baselines and CBMs. This is contrary to the accuracy degradation typically reported previously in literature. CB-CNN achieves substantially better overall concept prediction quality indicating that its learned representations encoding the predefined clinical concepts more faithful. In the leakage analysis (section~\ref{sec:leakage}), we argue that CB-CNN classifications are explained by its concepts where we have residual pathway accuracy $50\%$. 
+
+CB-GNN achieves higher and more stable sensitivity compared to the baseline and CB-CNN at the cost of lower concept quality and more leakage through its residual pathway. We further establish the concept validation via $R^2$ screening to highlight the quality of the concept.
+
+Future work can extend this study by extending the concept set with age-stratified normalization to recover alpha and ratio concepts in the population. Furthermore, uncertainty quantification at the concept level can be used to flag unreliable individual concept predictions for clinical review. A further direction is incorporating a more comprehensive list of EEG biomarkers such as functional connectivity metrics and networks features alongside the current ones. 
+
+
+
+%\ack{This work has received funding from the European Union's Horizon 2020 research and innovation programme under grant agreement No. 964220. This document reflects views of author(s) and the European Commission is not responsible for any use that may be made of the information it contains.}
+
+\section*{Ethics statement}
+This study involved analysis of two publicly available and fully anonymized EEG datasets. The CAUEEG dataset \cite{kim2023caueeg} was collected under IRB approval from Chung-Ang University Hospital. The Temple University Hospital EEG Corpus \cite{obeid2016} was collected in accordance with the Declaration of Helsinki under full Temple University IRB approval and de-identified in compliance with the HIPAA Privacy Rule.
+
+
+\roles{Mohamed Radwan: Conceptualisation, Methodology, Software, Investigation, Writing -- Original Draft.
+Pedro G. Lind: Supervision, Conceptualisation, Writing -- Review \& Editing.
+Anis Yazidi: Supervision, Conceptualisation, Writing -- Review \& Editing}
+
+
+\section*{Conflict of Interest}
+The authors declare no known competing interests.
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+% References are in references.bib (BibTeX). If your local setup provides an
+% IOP-specific style file (e.g. iopart-num.bst) it can be substituted below;
+% `unsrt` (numbered, in citation order) is used as a universally-available
+% default since this could not be compile-tested in this environment.
+% ─────────────────────────────────────────────────────────────────────────────
+
+\clearpage 
+\bibliographystyle{unsrt}
+\bibliography{references}
+
+\end{document}

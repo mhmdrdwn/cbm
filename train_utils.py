@@ -43,6 +43,22 @@ def tee_stdout_to_file(log_path):
             sys.stdout = original_stdout
 
 
+CHECKPOINT_DIR = "saved_models"
+
+
+def checkpoint_path(filename):
+    """
+    Every train_*.py script's torch.save(..., checkpoint_path("xxx.pt")) and
+    every analysis script's torch.load(checkpoint_path("xxx.pt")) go through
+    this single helper, so the checkpoint directory (CHECKPOINT_DIR) only
+    needs to change in one place. Creates CHECKPOINT_DIR if it doesn't exist
+    yet, same reasoning as tee_stdout_to_file's log_dir creation above --
+    works on a fresh checkout with no saved_models/ directory yet.
+    """
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    return os.path.join(CHECKPOINT_DIR, filename)
+
+
 def split_validation(dataset, indices, val_frac, seed):
     """
     Carve a class-stratified validation slice out of a training pool, so

@@ -1,10 +1,10 @@
 {
   "shallow_cnn": [
     {
-      "accuracy": 0.602,
-      "f1": 0.601,
-      "sensitivity": 0.601,
-      "specificity": 0.802
+      "accuracy": 0.6016949152542372,
+      "f1": 0.6006201609738825,
+      "sensitivity": 0.6005256616381031,
+      "specificity": 0.8021864789106169
     },
     {
       "accuracy": 0.5932203389830508,
@@ -19,64 +19,143 @@
       "specificity": 0.8087608432436019
     }
   ],
-  "gnn": [
-    {
-      "accuracy": 0.5254,
-      "f1": 0.5324,
-      "sensitivity": 0.5336,
-      "specificity": 0.7615
-    },
-    {
-      "accuracy": 0.559322033898305,
-      "f1": 0.5542884843208592,
-      "sensitivity": 0.5677715823441545,
-      "specificity": 0.7794426199598613
-    },
-    {
-      "accuracy": 0.6101694915254238,
-      "f1": 0.6035971034265625,
-      "sensitivity": 0.6209135794022737,
-      "specificity": 0.8028250485147037
-    }
-  ],
   "cb_shallow_cnn": [
     {
-      "accuracy": 0.61,
-      "f1": 0.615,
-      "sensitivity": 0.611,
-      "specificity": 0.804
+      "accuracy": 0.635593220338983,
+      "f1": 0.6342161016949153,
+      "sensitivity": 0.6391749050730339,
+      "specificity": 0.8151175133933753
     },
     {
-      "accuracy": 0.559322033898305,
-      "f1": 0.5621392579019698,
-      "sensitivity": 0.5713064003010296,
-      "specificity": 0.7829360932809207
+      "accuracy": 0.5677966101694916,
+      "f1": 0.5732496011238098,
+      "sensitivity": 0.5715686609881526,
+      "specificity": 0.7818849413677
     },
     {
-      "accuracy": 0.6101694915254238,
-      "f1": 0.6114997775587288,
-      "sensitivity": 0.6139294632778024,
-      "specificity": 0.8050227231261714
+      "accuracy": 0.5338983050847458,
+      "f1": 0.5291339543641587,
+      "sensitivity": 0.5337461088495877,
+      "specificity": 0.7715351379144483
     }
   ],
-  "cb_gnn": [
+  "cb_shallow_cnn_plain": [
     {
-      "accuracy": 0.534,
-      "f1": 0.531,
-      "sensitivity": 0.535,
-      "specificity": 0.762
+      "accuracy": 0.6016949152542372,
+      "f1": 0.6056980378009077,
+      "sensitivity": 0.604944184084197,
+      "specificity": 0.7979051599741256,
+      "concept_r2": {
+        "frontal_delta": 0.05,
+        "frontal_theta": 0.584,
+        "frontal_alpha": 0.322,
+        "frontal_beta": 0.186,
+        "temporal_delta": -0.007,
+        "temporal_theta": -0.069,
+        "temporal_alpha": 0.592,
+        "temporal_beta": 0.124,
+        "central_delta": -0.188,
+        "central_theta": 0.616,
+        "central_alpha": 0.525,
+        "central_beta": 0.499,
+        "parietal_delta": 0.129,
+        "parietal_theta": 0.67,
+        "parietal_alpha": 0.689,
+        "parietal_beta": 0.572,
+        "occipital_delta": 0.028,
+        "occipital_theta": 0.416,
+        "occipital_alpha": 0.478,
+        "occipital_beta": 0.536,
+        "frontal_alpha_asym": -2.86,
+        "temporal_alpha_asym": -0.065,
+        "posterior_alpha_asym": -1.137,
+        "theta_alpha_ratio": 0.28,
+        "delta_alpha_ratio": -0.523,
+        "dtabr": -0.5,
+        "alpha_peak_freq": -0.405,
+        "alpha_peak_amplitude": -0.502,
+        "frontal_alpha_plv": -1.327,
+        "temporal_alpha_plv": -1.832,
+        "posterior_alpha_plv": -0.132
+      }
     },
     {
-      "accuracy": 0.559322033898305,
-      "f1": 0.5619936799770182,
-      "sensitivity": 0.5563974503700156,
-      "specificity": 0.7753582624272278
+      "accuracy": 0.6864406779661016,
+      "f1": 0.6846469139589777,
+      "sensitivity": 0.6905494931527155,
+      "specificity": 0.8435898392794945,
+      "concept_r2": {
+        "frontal_delta": -0.129,
+        "frontal_theta": 0.373,
+        "frontal_alpha": 0.609,
+        "frontal_beta": 0.354,
+        "temporal_delta": -0.067,
+        "temporal_theta": 0.732,
+        "temporal_alpha": 0.386,
+        "temporal_beta": 0.433,
+        "central_delta": 0.074,
+        "central_theta": 0.71,
+        "central_alpha": 0.394,
+        "central_beta": 0.501,
+        "parietal_delta": -0.488,
+        "parietal_theta": 0.594,
+        "parietal_alpha": 0.493,
+        "parietal_beta": 0.038,
+        "occipital_delta": 0.048,
+        "occipital_theta": 0.641,
+        "occipital_alpha": 0.175,
+        "occipital_beta": 0.635,
+        "frontal_alpha_asym": -7.118,
+        "temporal_alpha_asym": -0.844,
+        "posterior_alpha_asym": 0.014,
+        "theta_alpha_ratio": 0.345,
+        "delta_alpha_ratio": -0.38,
+        "dtabr": -0.506,
+        "alpha_peak_freq": -3.144,
+        "alpha_peak_amplitude": -0.052,
+        "frontal_alpha_plv": -0.274,
+        "temporal_alpha_plv": -4.833,
+        "posterior_alpha_plv": -0.025
+      }
     },
     {
-      "accuracy": 0.5847457627118644,
-      "f1": 0.5836999639379733,
-      "sensitivity": 0.5781365808047982,
-      "specificity": 0.7891434874193495
+      "accuracy": 0.5677966101694916,
+      "f1": 0.5705030882557496,
+      "sensitivity": 0.5750464657521751,
+      "specificity": 0.7846735001907416,
+      "concept_r2": {
+        "frontal_delta": -0.126,
+        "frontal_theta": 0.496,
+        "frontal_alpha": 0.016,
+        "frontal_beta": 0.15,
+        "temporal_delta": 0.247,
+        "temporal_theta": 0.678,
+        "temporal_alpha": 0.618,
+        "temporal_beta": 0.516,
+        "central_delta": 0.164,
+        "central_theta": 0.356,
+        "central_alpha": 0.359,
+        "central_beta": 0.191,
+        "parietal_delta": -0.578,
+        "parietal_theta": 0.72,
+        "parietal_alpha": 0.369,
+        "parietal_beta": 0.525,
+        "occipital_delta": 0.217,
+        "occipital_theta": 0.565,
+        "occipital_alpha": 0.434,
+        "occipital_beta": 0.509,
+        "frontal_alpha_asym": -3.307,
+        "temporal_alpha_asym": -0.203,
+        "posterior_alpha_asym": -1.858,
+        "theta_alpha_ratio": 0.088,
+        "delta_alpha_ratio": -0.528,
+        "dtabr": -0.702,
+        "alpha_peak_freq": 0.078,
+        "alpha_peak_amplitude": -0.366,
+        "frontal_alpha_plv": -0.357,
+        "temporal_alpha_plv": -0.952,
+        "posterior_alpha_plv": -0.202
+      }
     }
   ]
 }

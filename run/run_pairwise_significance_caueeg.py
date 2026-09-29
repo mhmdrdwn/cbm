@@ -1,11 +1,13 @@
 """
-Pairwise statistical significance for the 4 headline CAUEEG-Dementia models,
-using the EXISTING seed-42 checkpoints (no retraining -- inference-only,
-fast). Mirrors run_pairwise_significance_tuh.py -- see that file's
-docstring for the full rationale. McNemar's test and paired bootstrap CI
-work identically here despite this being a 3-class task: both operate on
-the binary correct/incorrect outcome per subject, not the specific
-predicted class.
+Pairwise statistical significance for the 3 headline CAUEEG-Dementia models
+(ShallowCNN, CB-ShallowCNN (hybrid), CB-ShallowCNN-Plain (pure bottleneck,
+residual=false)), using the EXISTING seed-42 checkpoints (no retraining --
+inference-only, fast). Mirrors run_pairwise_significance_tuh.py -- see that
+file's docstring for the full rationale, including why CB-ShallowCNN vs
+CB-ShallowCNN-Plain is the key added comparison. McNemar's test and paired
+bootstrap CI work identically here despite this being a 3-class task: both
+operate on the binary correct/incorrect outcome per subject, not the
+specific predicted class.
 
 CAUEEG's official split (not seed-dependent) plus eval_tta multi-window
 aggregation means per-subject predictions are directly comparable across
@@ -14,6 +16,11 @@ models as long as the same eval_ds construction is used for all of them
 order, which is identical across runs since the eval loader is
 deterministic/shuffle=False).
 """
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root, for models/data/utils/train_utils
+
 import numpy as np
 import torch
 import yaml
@@ -25,8 +32,8 @@ from data.caueeg_e2e_loader import (
 )
 from data.caueeg_concepts_loader import CAUEEGWithConceptsDataset, collate_caueeg_concepts
 from models.shallow_cnn import ShallowConvNet
-from models.graph_coupling_cnn import ShallowGNN
-from models.concept_bottleneck import ConceptBottleneckShallowCNN, ConceptBottleneckGNN, normalize_concepts
+from models.concept_bottleneck import ConceptBottleneckShallowCNN, normalize_concepts
+from train_utils import checkpoint_path
 from utils.metrics import aggregate_predictions_by_subject
 
 N_BOOTSTRAP = 10000
@@ -69,7 +76,7 @@ def get_plain_predictions(model_cls, ckpt_path, config_path, **model_kwargs):
     return np.array(preds), np.array(labels)
 
 
-def get_cb_predictions(model_cls, ckpt_path, config_path, is_gnn):
+def get_cb_predictions(model_cls, ckpt_path, config_path):
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
     m, d = cfg["model"], cfg["data"]
@@ -91,19 +98,10 @@ def get_cb_predictions(model_cls, ckpt_path, config_path, is_gnn):
     loader = DataLoader(eval_ds, batch_size=32, shuffle=False, collate_fn=collate_caueeg_concepts)
     device = torch.device("cpu")
 
-    if is_gnn:
-        model = model_cls(
-            n_channels=d["n_channels"], n_classes=m["n_classes"],
-            n_filters_time=m.get("n_filters_time", 40), n_filters_spat=m.get("n_filters_spat", 40),
-            n_hops=m.get("n_hops", 2), sfreq=d["sfreq"], beta_band=tuple(m.get("beta_band", (13, 30))),
-            beta_filters=m.get("beta_filters", 16), dropout=m.get("dropout", 0.5),
-            residual=m.get("residual", True), dead_concept_indices=[],
-        ).to(device)
-    else:
-        model = model_cls(
-            n_channels=d["n_channels"], n_classes=m["n_classes"], n_filters=m.get("n_filters", 40),
-            dropout=m.get("dropout", 0.5), residual=m.get("residual", True), dead_concept_indices=[],
-        ).to(device)
+    model = model_cls(
+        n_channels=d["n_channels"], n_classes=m["n_classes"], n_filters=m.get("n_filters", 40),
+        dropout=m.get("dropout", 0.5), residual=m.get("residual", True), dead_concept_indices=[],
+    ).to(device)
 
     ckpt = torch.load(ckpt_path, map_location=device)
     model.load_state_dict(ckpt["model_state"])
@@ -156,30 +154,25 @@ def main():
     print("Loading predictions from existing seed-42 CAUEEG-Dementia checkpoints...", flush=True)
 
     preds_cnn, labels = get_plain_predictions(
-        ShallowConvNet, "caueeg_dementia_shallow_cnn_best_model.pt", "config_caueeg_dementia_shallow_cnn.yaml",
-        n_classes=3, dropout=0.5,
-    )
-    preds_gnn, labels_g = get_plain_predictions(
-        ShallowGNN, "caueeg_dementia_graph_cnn_best_model.pt", "config_caueeg_dementia_graph_cnn.yaml",
-        n_classes=3, n_hops=2, dropout=0.5,
+        ShallowConvNet, checkpoint_path("caueeg_dementia_shallow_cnn_best_model.pt"),
+        "config/config_caueeg_dementia_shallow_cnn.yaml", n_classes=3, dropout=0.5,
     )
     preds_cb_cnn, labels_c = get_cb_predictions(
-        ConceptBottleneckShallowCNN, "caueeg_dementia_concept_bottleneck_best_model.pt",
-        "config_caueeg_dementia_concept_bottleneck.yaml", is_gnn=False,
+        ConceptBottleneckShallowCNN, checkpoint_path("caueeg_dementia_concept_bottleneck_best_model.pt"),
+        "config/config_caueeg_dementia_concept_bottleneck.yaml",
     )
-    preds_cb_gnn, labels_cg = get_cb_predictions(
-        ConceptBottleneckGNN, "caueeg_dementia_concept_bottleneck_gnn_best_model.pt",
-        "config_caueeg_dementia_concept_bottleneck_gnn.yaml", is_gnn=True,
+    preds_cb_plain, labels_p = get_cb_predictions(
+        ConceptBottleneckShallowCNN, checkpoint_path("caueeg_dementia_concept_bottleneck_plain_best_model.pt"),
+        "config/config_caueeg_dementia_concept_bottleneck_plain.yaml",
     )
 
-    assert np.array_equal(labels, labels_g) and np.array_equal(labels, labels_c) and np.array_equal(labels, labels_cg), \
+    assert np.array_equal(labels, labels_c) and np.array_equal(labels, labels_p), \
         "eval label order mismatch across models -- cannot compare per-sample"
 
     models = {
         "ShallowCNN": preds_cnn,
-        "GNN": preds_gnn,
         "CB-ShallowCNN": preds_cb_cnn,
-        "CB-GNN": preds_cb_gnn,
+        "CB-ShallowCNN-Plain": preds_cb_plain,
     }
     correct = {name: (preds == labels) for name, preds in models.items()}
 
