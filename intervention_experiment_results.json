@@ -1,0 +1,104 @@
+{
+  "hybrid": {
+    "per_seed": {
+      "42": {
+        "baseline": {
+          "accuracy": 0.8297101449275363,
+          "f1": 0.828615201669688,
+          "sensitivity": 0.7619047619047619,
+          "specificity": 0.8866666666666667
+        },
+        "full_intervention_accuracy": 0.8405797101449275,
+        "gain": 0.010869565217391242,
+        "n_concepts": 30
+      },
+      "43": {
+        "baseline": {
+          "accuracy": 0.8260869565217391,
+          "f1": 0.8204222558300012,
+          "sensitivity": 0.6587301587301587,
+          "specificity": 0.9666666666666667
+        },
+        "full_intervention_accuracy": 0.8260869565217391,
+        "gain": 0.0,
+        "n_concepts": 30
+      },
+      "44": {
+        "baseline": {
+          "accuracy": 0.8297101449275363,
+          "f1": 0.8281168563982994,
+          "sensitivity": 0.746031746031746,
+          "specificity": 0.9
+        },
+        "full_intervention_accuracy": 0.8260869565217391,
+        "gain": -0.0036231884057971175,
+        "n_concepts": 30
+      }
+    },
+    "summary": {
+      "baseline_accuracy_mean": 0.8285024154589372,
+      "baseline_accuracy_std": 0.0017079873941704122,
+      "full_intervention_accuracy_mean": 0.8309178743961353,
+      "full_intervention_accuracy_std": 0.006831949576681597,
+      "gain_mean": 0.0024154589371980415,
+      "gain_std": 0.006158236127527495,
+      "n_concepts": 30,
+      "seeds": [
+        42,
+        43,
+        44
+      ]
+    }
+  },
+  "plain": {
+    "per_seed": {
+      "42": {
+        "baseline": {
+          "accuracy": 0.8260869565217391,
+          "f1": 0.8237105049959492,
+          "sensitivity": 0.7222222222222222,
+          "specificity": 0.9133333333333333
+        },
+        "full_intervention_accuracy": 0.5144927536231884,
+        "gain": -0.3115942028985508,
+        "n_concepts": 30
+      },
+      "43": {
+        "baseline": {
+          "accuracy": 0.8188405797101449,
+          "f1": 0.8134489302967564,
+          "sensitivity": 0.6587301587301587,
+          "specificity": 0.9533333333333334
+        },
+        "full_intervention_accuracy": 0.6123188405797102,
+        "gain": -0.2065217391304347,
+        "n_concepts": 30
+      },
+      "44": {
+        "baseline": {
+          "accuracy": 0.8369565217391305,
+          "f1": 0.8354310327217759,
+          "sensitivity": 0.753968253968254,
+          "specificity": 0.9066666666666666
+        },
+        "full_intervention_accuracy": 0.5652173913043478,
+        "gain": -0.2717391304347827,
+        "n_concepts": 30
+      }
+    },
+    "summary": {
+      "baseline_accuracy_mean": 0.8272946859903382,
+      "baseline_accuracy_std": 0.007444944448030198,
+      "full_intervention_accuracy_mean": 0.5640096618357487,
+      "full_intervention_accuracy_std": 0.039946462339471606,
+      "gain_mean": -0.2632850241545894,
+      "gain_std": 0.04331019583826361,
+      "n_concepts": 30,
+      "seeds": [
+        42,
+        43,
+        44
+      ]
+    }
+  }
+}

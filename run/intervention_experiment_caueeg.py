@@ -1,26 +1,18 @@
 """
-Concept intervention experiment, run for BOTH CB-ShallowCNN variants: the
-hybrid (residual=true, tuh_concept_bottleneck_best_model.pt) and the Plain
-pure bottleneck (residual=false, tuh_concept_bottleneck_plain_best_model.pt)
--- across ALL 3 seeds (42, 43, 44), matching how classification accuracy and
-concept R^2 are already reported as mean +/- std across seeds
-(run_multiseed_tuh.py) rather than from a single seed-42 run.
+Concept intervention experiment for CAUEEG-Dementia, mirroring
+run/intervention_experiment.py (TUH) -- see that file's docstring for the
+full rationale (hybrid vs Plain pure-bottleneck comparison, all N_CONCEPTS
+(30) concepts corrected SIMULTANEOUSLY in one pass, no per-concept or
+progressive/staged breakdown), run across ALL 3 seeds (42, 43, 44) and
+aggregated as mean +/- std.
 
-Single full-intervention pass per seed: ALL N_CONCEPTS (30) concepts'
-predicted values are replaced with their true computed values
-SIMULTANEOUSLY at inference time (models/concept_bottleneck.py's
-`intervention=` forward argument), and the resulting TUAB test accuracy is
-compared against the no-intervention baseline for that seed's checkpoint.
-No per-concept or progressive/staged breakdown, and no R^2-based "working
-concept" prefilter (earlier versions of this script had both; see
-models/concept_bottleneck.py -- no concept is excluded anywhere in the
-pipeline any more, training or evaluation).
-
-Running both variants side by side tests a specific prediction: the Plain
-model has NO residual escape hatch, so correcting every concept at once is
-the classifier's ONLY new information -- intervention should move its
-accuracy at least as much as the hybrid's, and if the hybrid's residual is
-absorbing concept errors, the hybrid's intervention gain should be smaller.
+The one CAUEEG-specific difference: eval_tta means an eval "subject" can
+have several windows, each with its OWN true concepts (different EEG
+segment) -- intervention overrides each window's predicted concepts with
+that window's own true concepts, then predictions are aggregated by subject
+(softmax-averaged) exactly like the main classifier's own reported accuracy
+(aggregate_predictions_by_subject), so the intervened accuracy stays
+comparable to the baseline's.
 """
 import os
 import sys
@@ -32,39 +24,41 @@ import random
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 import yaml
 from torch.utils.data import DataLoader
 
-from data.tuh_e2e_loader import TUHEndToEndDataset
-from data.tuh_concepts_loader import TUHWithConceptsDataset, collate_tuh_concepts
+from data.caueeg_e2e_loader import CAUEEGEndToEndDataset, compute_eeg_channel_norm, normalize_eeg
+from data.caueeg_concepts_loader import CAUEEGWithConceptsDataset, collate_caueeg_concepts
 from models.concept_bottleneck import CONCEPT_NAMES, ConceptBottleneckShallowCNN, normalize_concepts
 from train_utils import checkpoint_path, seed_checkpoint_name, SEEDS
-from utils.metrics import compute_loso_metrics
+from utils.metrics import aggregate_predictions_by_subject, compute_loso_metrics
+
+TASK = "dementia"
 
 
 def run_pass(model, loader, device, concept_median, concept_iqr, intervene_indices=None):
-    """One eval pass. If intervene_indices is given (a list of concept indices),
-    every batch has ALL of those concepts' predicted values simultaneously
-    overridden with their own true (per-sample) values before the classifier
-    runs. Returns (preds, labels, true_concepts, pred_concepts)."""
+    """One eval pass over (possibly multi-window-per-subject) CAUEEG data.
+    Returns per-subject-aggregated (preds, labels) via TTA, same aggregation
+    the main classifier's own reported accuracy uses."""
     model.eval()
-    preds, labels, true_c, pred_c = [], [], [], []
+    all_probs, all_labels_raw, all_sids = [], [], []
     with torch.no_grad():
         for raw_batch in loader:
-            x = raw_batch["raw_eeg"].to(device)
+            x = raw_batch["raw_eeg_norm"]
             true_concepts = normalize_concepts(
                 raw_batch["concepts_raw"].to(device), concept_median, concept_iqr,
             )
             intervention = None
             if intervene_indices:
                 intervention = {idx: true_concepts[:, idx] for idx in intervene_indices}
-            logits, pred_concepts = model(x, intervention=intervention)
+            logits, _ = model(x, intervention=intervention)
 
-            preds.extend(logits.argmax(dim=1).cpu().tolist())
-            labels.extend(raw_batch["label"].tolist())
-            true_c.append(true_concepts.cpu().numpy())
-            pred_c.append(pred_concepts.cpu().numpy())
-    return preds, labels, np.concatenate(true_c), np.concatenate(pred_c)
+            all_probs.extend(F.softmax(logits, dim=-1).cpu().tolist())
+            all_labels_raw.extend(raw_batch["label"].tolist())
+            all_sids.extend(raw_batch["subject_id"])
+    preds, labels = aggregate_predictions_by_subject(all_probs, all_sids, all_labels_raw)
+    return preds, labels
 
 
 def run_intervention_one_seed(variant_label, config_path, seed):
@@ -72,27 +66,39 @@ def run_intervention_one_seed(variant_label, config_path, seed):
 
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
-    m, t, d = cfg["model"], cfg["training"], cfg["data"]
+    m, d = cfg["model"], cfg["data"]
 
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    eval_base = TUHEndToEndDataset(
-        root_dir=d["root_dir"], cache_dir=d["cache_dir"], split="eval",
+    train_base = CAUEEGEndToEndDataset(
+        root_dir=d["root_dir"], task=TASK, cache_dir=d["cache_dir"], split="train",
         sfreq=d["sfreq"], bandpass=tuple(d["bandpass"]), skip_sec=d["skip_sec"],
-        max_sec=d["max_sec"], clip_uv=d["clip_uv"], divisor=d["divisor"],
+        window_sec=d["window_sec"], max_windows_per_subject=d.get("max_windows_per_subject", 5),
+        clip_uv=d["clip_uv"], divisor=d["divisor"],
     )
-    eval_ds = TUHWithConceptsDataset(eval_base, d["concept_cache_dir"], sfreq=d["sfreq"])
-    eval_loader = DataLoader(eval_ds, batch_size=32, shuffle=False, collate_fn=collate_tuh_concepts)
-    print(f"eval(test)={len(eval_ds)}", flush=True)
+    eval_base = CAUEEGEndToEndDataset(
+        root_dir=d["root_dir"], task=TASK, cache_dir=d["cache_dir"], split="eval",
+        sfreq=d["sfreq"], bandpass=tuple(d["bandpass"]), skip_sec=d["skip_sec"],
+        window_sec=d["window_sec"], max_windows_per_subject=d.get("max_windows_per_subject", 5),
+        clip_uv=d["clip_uv"], divisor=d["divisor"], eval_tta=d.get("eval_tta", True),
+    )
+    train_ds = CAUEEGWithConceptsDataset(train_base, d["concept_cache_dir"], sfreq=d["sfreq"])
+    eval_ds = CAUEEGWithConceptsDataset(eval_base, d["concept_cache_dir"], sfreq=d["sfreq"])
+    # eeg_mean/std are population stats over train subjects, deterministic given the
+    # (seed-independent) train split -- recomputing here reproduces training-time exactly.
+    eeg_mean, eeg_std = compute_eeg_channel_norm(train_ds, list(range(len(train_ds))))
+
+    eval_loader = DataLoader(eval_ds, batch_size=32, shuffle=False, collate_fn=collate_caueeg_concepts)
+    print(f"eval(test windows)={len(eval_ds)}", flush=True)
 
     model = ConceptBottleneckShallowCNN(
         n_channels=d["n_channels"], n_classes=m["n_classes"], n_filters=m.get("n_filters", 40),
         dropout=m.get("dropout", 0.5), residual=m.get("residual", True),
     ).to(device)
-    checkpoint_name = m.get("checkpoint_name", "tuh_concept_bottleneck")
+    checkpoint_name = m.get("checkpoint_name", f"caueeg_{TASK}_concept_bottleneck")
     ckpt = torch.load(checkpoint_path(seed_checkpoint_name(checkpoint_name, seed)), map_location=device)
     model.load_state_dict(ckpt["model_state"])
     concept_median = ckpt["concept_median"].to(device)
@@ -100,9 +106,16 @@ def run_intervention_one_seed(variant_label, config_path, seed):
     print(f"loaded checkpoint (best_epoch={ckpt['best_epoch']}, "
           f"best_val_bal_acc={ckpt['best_val_bal_acc']:.4f})", flush=True)
 
+    # normalize_eeg is applied once per batch up front (same for baseline and
+    # intervention passes), so wrap the loader to attach it to each batch.
+    def normed_loader():
+        for raw_batch in eval_loader:
+            raw_batch["raw_eeg_norm"] = normalize_eeg(raw_batch["raw_eeg"].to(device), eeg_mean, eeg_std)
+            yield raw_batch
+
     # baseline pass (no intervention)
-    base_preds, base_labels, _, _ = run_pass(
-        model, eval_loader, device, concept_median, concept_iqr, intervene_indices=None,
+    base_preds, base_labels = run_pass(
+        model, list(normed_loader()), device, concept_median, concept_iqr, intervene_indices=None,
     )
     base_metrics = compute_loso_metrics(base_preds, base_labels)
     base_acc = base_metrics["accuracy"]
@@ -112,8 +125,8 @@ def run_intervention_one_seed(variant_label, config_path, seed):
 
     # full intervention: ALL N_CONCEPTS concepts corrected SIMULTANEOUSLY in one pass.
     all_indices = list(range(len(CONCEPT_NAMES)))
-    preds, labels, _, _ = run_pass(
-        model, eval_loader, device, concept_median, concept_iqr, intervene_indices=all_indices,
+    preds, labels = run_pass(
+        model, list(normed_loader()), device, concept_median, concept_iqr, intervene_indices=all_indices,
     )
     full_acc = compute_loso_metrics(preds, labels)["accuracy"]
     full_gain = full_acc - base_acc
@@ -132,7 +145,7 @@ def run_intervention_one_seed(variant_label, config_path, seed):
 def run_intervention(variant_label, config_path):
     """Runs run_intervention_one_seed for every seed in SEEDS, then aggregates
     baseline/full-intervention accuracy and gain as mean +/- std across seeds
-    (same convention as run_multiseed_tuh.py's accuracy/R^2 reporting)."""
+    (same convention as run_multiseed_caueeg.py's accuracy/R^2 reporting)."""
     per_seed = {seed: run_intervention_one_seed(variant_label, config_path, seed) for seed in SEEDS}
 
     base_accs = np.array([r["baseline"]["accuracy"] for r in per_seed.values()])
@@ -170,12 +183,17 @@ def run_intervention(variant_label, config_path):
 
 def main():
     results = {
-        "hybrid": run_intervention("CB-ShallowCNN (hybrid, residual=true)", "config/config_tuh_concept_bottleneck.yaml"),
-        "plain": run_intervention("CB-ShallowCNN-Plain (pure bottleneck, residual=false)", "config/config_tuh_concept_bottleneck_plain.yaml"),
+        "hybrid": run_intervention(
+            "CB-ShallowCNN (hybrid, residual=true)", "config/config_caueeg_dementia_concept_bottleneck.yaml",
+        ),
+        "plain": run_intervention(
+            "CB-ShallowCNN-Plain (pure bottleneck, residual=false)",
+            "config/config_caueeg_dementia_concept_bottleneck_plain.yaml",
+        ),
     }
-    with open("intervention_experiment_results.json", "w") as f:
+    with open("intervention_experiment_caueeg_results.json", "w") as f:
         json.dump(results, f, indent=2)
-    print("\nSaved to intervention_experiment_results.json")
+    print("\nSaved to intervention_experiment_caueeg_results.json")
 
 
 if __name__ == "__main__":

@@ -44,6 +44,18 @@ def tee_stdout_to_file(log_path):
 
 
 CHECKPOINT_DIR = "saved_models"
+SEEDS = [42, 43, 44]
+
+
+def seed_checkpoint_name(checkpoint_name, seed):
+    """Seed 42 uses the canonical unsuffixed checkpoint; seeds 43/44 use the
+    `_seed{N}` suffix inserted before `.pt`, matching the convention the
+    run_multiseed_{tuh,caueeg}.py torch.save monkeypatch writes at training
+    time. Every multi-seed analysis script (intervention, leakage) builds its
+    per-seed checkpoint filename through this one helper."""
+    if seed == 42:
+        return f"{checkpoint_name}_best_model.pt"
+    return f"{checkpoint_name}_best_model_seed{seed}.pt"
 
 
 def checkpoint_path(filename):

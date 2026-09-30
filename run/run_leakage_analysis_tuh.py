@@ -1,15 +1,17 @@
-
+"""
+Frozen-backbone linear-probe leakage analysis, run across ALL 3 seeds
+(42, 43, 44) and aggregated as mean +/- std per probe type (concept-only /
+residual-only / combined), matching how classification accuracy and concept
+R^2 are already reported across seeds elsewhere (run_multiseed_tuh.py)
+rather than from a single seed-42 checkpoint.
+"""
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root, for models/data/utils/train_utils
 
-import copy
-import random
-
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import yaml
 from torch.utils.data import DataLoader, Subset
@@ -17,18 +19,11 @@ from torch.utils.data import DataLoader, Subset
 from data.tuh_e2e_loader import TUHEndToEndDataset
 from data.tuh_concepts_loader import TUHWithConceptsDataset, collate_tuh_concepts
 from models.concept_bottleneck import ConceptBottleneckShallowCNN, normalize_concepts
-from train_utils import checkpoint_path, split_validation
+from run.leakage_probe_common import (
+    set_all_seeds, train_probe, evaluate_probe, aggregate_over_seeds,
+)
+from train_utils import checkpoint_path, split_validation, seed_checkpoint_name, SEEDS
 from utils.metrics import compute_loso_metrics
-
-PROBE_EPOCHS = 100
-PROBE_LR = 1e-3
-PROBE_WD = 1e-4
-
-
-def set_all_seeds(seed=42):
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
 
 
 def extract_features_shallow(model, loader, device, concept_median, concept_iqr):
@@ -47,44 +42,9 @@ def extract_features_shallow(model, loader, device, concept_median, concept_iqr)
     return torch.cat(all_concepts), torch.cat(all_resid), torch.tensor(all_labels)
 
 
-def train_probe(input_dim, n_classes, train_x, train_y, val_x, val_y, class_weights, device):
-    probe = nn.Linear(input_dim, n_classes).to(device)
-    optim = torch.optim.Adam(probe.parameters(), lr=PROBE_LR, weight_decay=PROBE_WD)
-    train_x, train_y = train_x.to(device), train_y.to(device)
-    val_x, val_y = val_x.to(device), val_y.to(device)
-
-    best_val_bal_acc, best_state = -1.0, None
-    for epoch in range(PROBE_EPOCHS):
-        probe.train()
-        optim.zero_grad()
-        logits = probe(train_x)
-        loss = F.cross_entropy(logits, train_y, weight=class_weights)
-        loss.backward()
-        optim.step()
-
-        probe.eval()
-        with torch.no_grad():
-            val_preds = probe(val_x).argmax(dim=1).cpu().tolist()
-        val_metrics = compute_loso_metrics(val_preds, val_y.cpu().tolist())
-        val_bal_acc = (val_metrics["sensitivity"] + val_metrics["specificity"]) / 2
-        if val_bal_acc > best_val_bal_acc:
-            best_val_bal_acc = val_bal_acc
-            best_state = copy.deepcopy(probe.state_dict())
-
-    probe.load_state_dict(best_state)
-    return probe
-
-
-def evaluate_probe(probe, x, y, device):
-    probe.eval()
-    with torch.no_grad():
-        preds = probe(x.to(device)).argmax(dim=1).cpu().tolist()
-    return compute_loso_metrics(preds, y.tolist())
-
-
-def run_for_backbone(name, model_cls, ckpt_path, config_path, extract_fn, model_kwargs):
-    print(f"\n{'='*70}\n{name}\n{'='*70}", flush=True)
-    set_all_seeds(42)
+def run_for_backbone_one_seed(name, model_cls, ckpt_path, config_path, extract_fn, model_kwargs, seed):
+    print(f"\n{'='*70}\n{name}  seed={seed}\n{'='*70}", flush=True)
+    set_all_seeds(seed)
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
     m, t, d = cfg["model"], cfg["training"], cfg["data"]
@@ -104,7 +64,7 @@ def run_for_backbone(name, model_cls, ckpt_path, config_path, extract_fn, model_
     eval_ds = TUHWithConceptsDataset(eval_base, d["concept_cache_dir"], sfreq=d["sfreq"])
 
     all_indices = list(range(len(train_ds)))
-    train_indices, val_indices = split_validation(train_ds, all_indices, t.get("val_frac", 0.2), t["seed"])
+    train_indices, val_indices = split_validation(train_ds, all_indices, t.get("val_frac", 0.2), seed)
 
     train_loader = DataLoader(Subset(train_ds, train_indices), batch_size=32, shuffle=False, collate_fn=collate_tuh_concepts)
     val_loader = DataLoader(Subset(train_ds, val_indices), batch_size=32, shuffle=False, collate_fn=collate_tuh_concepts)
@@ -145,21 +105,45 @@ def run_for_backbone(name, model_cls, ckpt_path, config_path, extract_fn, model_
     return results
 
 
+def run_for_backbone(name, model_cls, checkpoint_name, config_path, extract_fn, model_kwargs):
+    """Runs run_for_backbone_one_seed for every seed in SEEDS (each seed loads
+    its own checkpoint via seed_checkpoint_name), then aggregates each probe's
+    metrics as mean +/- std across seeds."""
+    per_seed = {}
+    for seed in SEEDS:
+        ckpt_path = checkpoint_path(seed_checkpoint_name(checkpoint_name, seed))
+        per_seed[seed] = run_for_backbone_one_seed(
+            name, model_cls, ckpt_path, config_path, extract_fn, model_kwargs, seed,
+        )
+
+    summary = aggregate_over_seeds(per_seed, SEEDS)
+
+    print(f"\n{'='*70}\n{name}: aggregate over seeds {SEEDS}\n{'='*70}")
+    for probe_name in summary:
+        s = summary[probe_name]
+        print(f"  {probe_name:<15} acc={s['accuracy_mean']:.4f} +/- {s['accuracy_std']:.4f}")
+
+    return {
+        "per_seed": {str(seed): r for seed, r in per_seed.items()},
+        "summary": summary,
+    }
+
+
 def main():
     results = {}
 
     results["CB-ShallowCNN"] = run_for_backbone(
         "CB-ShallowCNN", ConceptBottleneckShallowCNN,
-        checkpoint_path("tuh_concept_bottleneck_best_model.pt"), "config/config_tuh_concept_bottleneck.yaml",
+        "tuh_concept_bottleneck", "config/config_tuh_concept_bottleneck.yaml",
         extract_features_shallow,
         dict(n_classes=2, n_filters=40, dropout=0.5, residual=True),
     )
 
     print(f"\n\n{'='*70}\nSUMMARY\n{'='*70}")
-    for backbone, probes in results.items():
+    for backbone, r in results.items():
         print(f"\n{backbone}:")
-        for probe_name, metrics in probes.items():
-            print(f"  {probe_name:<15} acc={metrics['accuracy']:.4f}")
+        for probe_name, s in r["summary"].items():
+            print(f"  {probe_name:<15} acc={s['accuracy_mean']:.4f} +/- {s['accuracy_std']:.4f}")
 
     import json
     with open("leakage_analysis_tuh_results.json", "w") as f:

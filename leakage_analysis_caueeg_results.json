@@ -1,0 +1,98 @@
+{
+  "CB-ShallowCNN": {
+    "per_seed": {
+      "42": {
+        "concept-only": {
+          "accuracy": 0.5847457627118644,
+          "f1": 0.5278266519833082,
+          "sensitivity": 0.5999726336674307,
+          "specificity": 0.7930101507687715
+        },
+        "residual-only": {
+          "accuracy": 0.635593220338983,
+          "f1": 0.6370059041634479,
+          "sensitivity": 0.633045986841355,
+          "specificity": 0.8152211772901429
+        },
+        "combined": {
+          "accuracy": 0.6271186440677966,
+          "f1": 0.6180541116818156,
+          "sensitivity": 0.6310163171757945,
+          "specificity": 0.8143752798925213
+        }
+      },
+      "43": {
+        "concept-only": {
+          "accuracy": 0.5932203389830508,
+          "f1": 0.5949686391760622,
+          "sensitivity": 0.6038267255042817,
+          "specificity": 0.7966653397687881
+        },
+        "residual-only": {
+          "accuracy": 0.6440677966101694,
+          "f1": 0.6461097445317199,
+          "sensitivity": 0.6455660839918357,
+          "specificity": 0.8216441923338476
+        },
+        "combined": {
+          "accuracy": 0.6440677966101694,
+          "f1": 0.6482524476260659,
+          "sensitivity": 0.6447108860990434,
+          "specificity": 0.8199544708165397
+        }
+      },
+      "44": {
+        "concept-only": {
+          "accuracy": 0.5508474576271186,
+          "f1": 0.5440803526862251,
+          "sensitivity": 0.5605252055325604,
+          "specificity": 0.7785967225622398
+        },
+        "residual-only": {
+          "accuracy": 0.6271186440677966,
+          "f1": 0.6285999991431889,
+          "sensitivity": 0.6293059213902096,
+          "specificity": 0.8126855583752136
+        },
+        "combined": {
+          "accuracy": 0.6186440677966102,
+          "f1": 0.6244011826204073,
+          "sensitivity": 0.6229432490678343,
+          "specificity": 0.8087608432436019
+        }
+      }
+    },
+    "summary": {
+      "concept-only": {
+        "accuracy_mean": 0.5762711864406779,
+        "accuracy_std": 0.0183071771141465,
+        "f1_mean": 0.5556252146151985,
+        "f1_std": 0.028600401964159874,
+        "sensitivity_mean": 0.5881081882347576,
+        "sensitivity_std": 0.01956747653691374,
+        "specificity_mean": 0.7894240710332664,
+        "specificity_std": 0.007800158453144529
+      },
+      "residual-only": {
+        "accuracy_mean": 0.635593220338983,
+        "accuracy_std": 0.006919462550234947,
+        "f1_mean": 0.6372385492794522,
+        "f1_std": 0.007150216253386848,
+        "sensitivity_mean": 0.6359726640744667,
+        "sensitivity_std": 0.0069532870729337275,
+        "specificity_mean": 0.8165169759997347,
+        "specificity_std": 0.003770375871893249
+      },
+      "combined": {
+        "accuracy_mean": 0.6299435028248587,
+        "accuracy_std": 0.010569653634954608,
+        "f1_mean": 0.6302359139760964,
+        "f1_std": 0.013000460016098036,
+        "sensitivity_mean": 0.6328901507808907,
+        "sensitivity_std": 0.008984837033035426,
+        "specificity_mean": 0.8143635313175542,
+        "specificity_std": 0.004569786871920755
+      }
+    }
+  }
+}
