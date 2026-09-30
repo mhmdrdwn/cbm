@@ -13,7 +13,7 @@ CNN backbone against a concept bottleneck model that routes classification throu
   architecture found in this project; every attention/graph-based
   alternative tried has underperformed it.
 - **`ConceptBottleneckShallowCNN`** (`models/concept_bottleneck.py`) --
-  same `ShallowConvNet` backbone -> `N_CONCEPTS` (31) predicted clinical EEG
+  same `ShallowConvNet` backbone -> `N_CONCEPTS` (30) predicted clinical EEG
   concepts (regional band powers, hemispheric asymmetries, theta/alpha
   ratios, alpha peak frequency/amplitude, interhemispheric alpha-band PLV
   connectivity) -> a classifier that consumes the concepts (not raw
@@ -116,7 +116,7 @@ python run/train_caueeg_concept_bottleneck.py          config/config_caueeg_deme
 concepts concatenated with a residual projection of the raw backbone features
 (`eq:classifier` in article.tex), which is why the leakage analysis (below) exists at
 all. `residual: false` -- the `*_plain.yaml` configs -- is a **pure** bottleneck: the
-classifier sees only the (gated) concept vector, no escape hatch. Both share the same
+classifier sees only the concept vector, no escape hatch. Both share the same
 `ConceptBottleneckShallowCNN` class (`models/concept_bottleneck.py`); only the
 `residual` flag and `checkpoint_name` (so the two variants don't overwrite each
 other's checkpoint/log) differ between the configs.
@@ -140,16 +140,18 @@ python run/run_multiseed_caueeg.py
 # across ShallowCNN, CB-ShallowCNN (hybrid), and CB-ShallowCNN-Plain (pure
 # bottleneck, residual=false) -- needs saved_models/*_concept_bottleneck_
 # plain_best_model.pt too (see "Plain concept bottleneck" ablation below).
+# Saves pairwise_significance_{tuh,caueeg}_results.json.
 # (article.tex section 5.2, tables tab:mcnemar / tab:mcnemar_caueeg).
 python run/run_pairwise_significance_tuh.py
 python run/run_pairwise_significance_caueeg.py
 
-# intervention: replace predicted concepts with their true computed values at
-# inference (single-concept, then progressive multi-concept ordered by R^2) and
-# measure the TUAB accuracy change -- runs for BOTH CB-ShallowCNN (hybrid) and
-# CB-ShallowCNN-Plain in one invocation, to compare intervention leverage with
-# vs without the residual escape hatch.
-# (article.tex section 5.4, tables tab:intervention / tab:intervention_progressive).
+# intervention: replace ALL predicted concepts with their true computed values
+# SIMULTANEOUSLY at inference (single full-intervention pass, no per-concept or
+# progressive staging) and measure the TUAB accuracy change -- runs for BOTH
+# CB-ShallowCNN (hybrid) and CB-ShallowCNN-Plain in one invocation, to compare
+# intervention leverage with vs without the residual escape hatch. Saves
+# intervention_experiment_results.json.
+# (article.tex section 5.4, table tab:intervention).
 python run/intervention_experiment.py
 
 # leakage: freeze the seed-42 CB-ShallowCNN (hybrid) backbone and train fresh
@@ -157,8 +159,15 @@ python run/intervention_experiment.py
 # to decompose how much classification signal bypasses the concept bottleneck.
 # CB-ShallowCNN-Plain has no residual pathway to analyze this way by
 # construction, so it's intentionally excluded here (see the script's docstring).
+# Saves leakage_analysis_tuh_results.json.
 # (article.tex section 5.5, table tab:leakage).
 python run/run_leakage_analysis_tuh.py
+
+# concept data-quality audit: validity/low-variance/redundancy/train-test-shift/
+# clinical-sanity checks on the cached concept values directly -- no trained
+# checkpoint needed, just a populated concept cache. Console output only.
+python run/check_concept_quality.py --dataset tuh --raw
+python run/check_concept_quality.py --dataset caueeg --raw
 ```
 
 TUH scripts share one raw-EEG cache (`data_cache/tuh_e2e_cache`); CAUEEG
@@ -172,10 +181,13 @@ local build artifacts, not source.
 
 Every `train_*.py` script saves its checkpoint to `saved_models/<name>.pt`
 via `train_utils.checkpoint_path` (creates the directory on first run), and
-every analysis script (`intervention_experiment.py`,
-`run_pairwise_significance_*.py`, `run_leakage_analysis_tuh.py`) loads
-from the same helper, so the checkpoint directory only needs to change
-in one place (`train_utils.CHECKPOINT_DIR`).
+every analysis script that loads a checkpoint (`intervention_experiment.py`,
+`run_pairwise_significance_*.py`, `run_leakage_analysis_tuh.py`) reads from
+the same helper, so the checkpoint directory only needs to change in one
+place (`train_utils.CHECKPOINT_DIR`). Every multiseed/significance/
+intervention/leakage script also saves its own results to a `*_results.json`
+file in the repo root (in addition to printing to console) -- nothing here
+is console-only.
 
 ## Layout
 
@@ -200,6 +212,9 @@ run/                           every runnable script (see Usage) -- each inserts
   run_pairwise_significance_caueeg.py     same, CAUEEG
   intervention_experiment.py              concept intervention, CB-ShallowCNN hybrid + Plain (TUH)
   run_leakage_analysis_tuh.py             frozen-backbone linear-probe leakage decomposition (TUH)
+  check_concept_quality.py                concept data-quality audit (validity, variance, redundancy,
+                                            train/test shift, clinical sanity) -- reads the concept
+                                            cache directly, no raw EEG or trained checkpoint needed
 data/
   tuh_e2e_loader.py            TUHEndToEndDataset -- raw time series, CAR, fixed-scale norm
   tuh_concepts_loader.py       TUHWithConceptsDataset -- wraps TUHEndToEndDataset + cached concepts

@@ -46,7 +46,7 @@ class CAUEEGWithConceptsDataset(Dataset):
 
 def collate_caueeg_concepts(items):
     """Same padding/length convention as data/caueeg_e2e_loader.py's collate_caueeg_e2e,
-    plus a stacked concepts_raw batch (fixed (28,) shape, no padding needed)."""
+    plus a stacked concepts_raw batch (fixed (N_CONCEPTS,) shape, no padding needed)."""
     lengths = torch.tensor([item["raw_eeg"].shape[-1] for item in items], dtype=torch.long)
     T_max = int(lengths.max())
     n_ch = items[0]["raw_eeg"].shape[1]

@@ -12,7 +12,7 @@ def concept_cache_path(cache_dir, sid):
 def get_raw_concepts(sid, x, sfreq, cache_dir, regions=None, asym_pairs=None):
     """
     x: (n_channels, n_samples) raw signal (numpy or torch). Returns a
-    (28,) float32 torch tensor of RAW (family-1-unnormalized) concepts --
+    (N_CONCEPTS,) float32 torch tensor of RAW (unnormalized) concepts --
     see compute_concepts_raw's docstring for why normalization is deferred.
     regions/asym_pairs: passed straight through to compute_concepts_raw --
     default (None) is TUH/NMT's channel ordering; pass REGIONS_CAUEEG/

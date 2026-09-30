@@ -28,6 +28,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root, for models/data/utils/train_utils
 
+import json
+
 import numpy as np
 import torch
 import yaml
@@ -158,11 +160,14 @@ def main():
     }
     correct = {name: (preds == labels) for name, preds in models.items()}
 
+    results = {"per_model": {}, "pairwise": []}
+
     print("\n=== Per-model accuracy + bootstrap 95% CI (n=10000 resamples) ===")
     for name, c in correct.items():
         acc = c.mean()
         lo, hi = bootstrap_acc_ci(c)
         print(f"  {name:<16} acc={acc:.4f}  95% CI=[{lo:.4f}, {hi:.4f}]")
+        results["per_model"][name] = {"accuracy": float(acc), "ci": [lo, hi]}
 
     print("\n=== Pairwise McNemar's test + paired bootstrap CI on accuracy difference ===")
     names = list(models.keys())
@@ -174,8 +179,16 @@ def main():
             sig = "*" if mc["p_value"] < 0.05 else " "
             print(f"  {b} - {a}: diff={mean_diff:+.4f}  95% CI=[{lo:+.4f}, {hi:+.4f}]  "
                   f"McNemar p={mc['p_value']:.4f}{sig}  (n01={mc['n01']}, n10={mc['n10']})")
+            results["pairwise"].append({
+                "a": a, "b": b, "diff": mean_diff, "ci": [lo, hi],
+                "p_value": mc["p_value"], "n01": mc["n01"], "n10": mc["n10"],
+            })
 
     print("\n(* = McNemar p < 0.05)")
+
+    with open("pairwise_significance_tuh_results.json", "w") as f:
+        json.dump(results, f, indent=2)
+    print("\nSaved to pairwise_significance_tuh_results.json")
 
 
 if __name__ == "__main__":

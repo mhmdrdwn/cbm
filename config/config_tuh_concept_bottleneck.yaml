@@ -19,7 +19,7 @@ model:
                                                  # logs/tuh_concept_bottleneck_run.log
 
 training:
-  epochs: 50
+  epochs: 20
   lr: 0.001
   weight_decay: 0.001
   lambda_concept: 0.5   # weight on the concept MSE loss vs classification cross-entropy.

@@ -6,13 +6,8 @@ import torch.nn.functional as F
 class ShallowConvNet(nn.Module):
     """
     Minimal reimplementation of the temporal-conv -> spatial-conv -> square
-    -> pool -> log EEG decoding architecture (Schirrmeister et al. 2017,
-    "ShallowFBCSPNet").
+    -> pool -> log. (Ref: Schirrmeister et al. 2017).
 
-    AdaptiveAvgPool2d at the end (not a fixed-size final conv/linear like
-    the original) makes this robust to the batch's padded time length
-    varying, since collate_e2e pads to each batch's own max rather than a
-    fixed size.
     """
 
     def __init__(self, n_channels, n_classes=2, n_filters_time=40,
@@ -29,8 +24,6 @@ class ShallowConvNet(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.classifier = nn.Linear(n_filters_spat, n_classes)
-        # Jansen-Rit-style per-channel excitatory gain estimate, predicted
-        # from the same pooled features the classifier sees.
         self.jr_estimator = nn.Sequential(
             nn.Linear(n_filters_spat, 32),
             nn.ReLU(),
@@ -38,15 +31,7 @@ class ShallowConvNet(nn.Module):
         )
 
     def forward(self, x, lengths=None):
-        """
-        x: (batch, n_channels, n_samples) -- lengths accepted (unused) so
-        this model is drop-in compatible with the same forward_batch-style
-        call used elsewhere in this project.
 
-        Returns:
-            logits: (batch, n_classes)
-            A_pred: (batch, n_channels) -- Jansen-Rit excitatory gain estimates
-        """
         x = x.unsqueeze(1)  # (batch, 1, n_channels, n_samples)
         x = self.temporal_conv(x)
         x = self.spatial_conv(x)
@@ -61,24 +46,3 @@ class ShallowConvNet(nn.Module):
         A_pred = 1.5 + 3.0 * torch.sigmoid(self.jr_estimator(pooled))
         return logits, A_pred
 
-    def spatial_coupling(self):
-        """
-        (n_channels, n_channels) cosine-similarity matrix implied by the
-        learned spatial filter -- this is the model's ONLY point of
-        cross-channel interaction (spatial_conv spans all 21 channels via
-        kernel_size=(n_channels, 1)). Each channel c's weight vector
-        across every (spatial filter, temporal filter) pair,
-        spatial_conv.weight[:, :, c, 0] flattened, is treated as that
-        channel's "role" embedding; channels the model has learned to
-        treat similarly across filters get high similarity here.
-
-        Global, not per-sample: spatial_conv's weights are the same for
-        every subject (they're model parameters, not a function of the
-        input), unlike the attention-based models elsewhere in this
-        project where connectivity is computed fresh per input. Called
-        directly on the model, not returned from forward().
-        """
-        W = self.spatial_conv.weight.squeeze(-1)  # (n_filters_spat, n_filters_time, n_channels)
-        W_flat = W.permute(2, 0, 1).reshape(self.n_channels, -1)  # (n_channels, n_filters_spat*n_filters_time)
-        W_norm = F.normalize(W_flat, dim=-1)
-        return W_norm @ W_norm.T  # (n_channels, n_channels), values in [-1, 1]

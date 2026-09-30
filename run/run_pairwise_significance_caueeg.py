@@ -21,6 +21,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root, for models/data/utils/train_utils
 
+import json
+
 import numpy as np
 import torch
 import yaml
@@ -100,7 +102,7 @@ def get_cb_predictions(model_cls, ckpt_path, config_path):
 
     model = model_cls(
         n_channels=d["n_channels"], n_classes=m["n_classes"], n_filters=m.get("n_filters", 40),
-        dropout=m.get("dropout", 0.5), residual=m.get("residual", True), dead_concept_indices=[],
+        dropout=m.get("dropout", 0.5), residual=m.get("residual", True),
     ).to(device)
 
     ckpt = torch.load(ckpt_path, map_location=device)
@@ -176,12 +178,15 @@ def main():
     }
     correct = {name: (preds == labels) for name, preds in models.items()}
 
+    results = {"n_subjects": len(labels), "per_model": {}, "pairwise": []}
+
     print(f"\nn={len(labels)} subjects")
     print("\n=== Per-model accuracy + bootstrap 95% CI (n=10000 resamples) ===")
     for name, c in correct.items():
         acc = c.mean()
         lo, hi = bootstrap_acc_ci(c)
         print(f"  {name:<16} acc={acc:.4f}  95% CI=[{lo:.4f}, {hi:.4f}]")
+        results["per_model"][name] = {"accuracy": float(acc), "ci": [lo, hi]}
 
     print("\n=== Pairwise McNemar's test + paired bootstrap CI on accuracy difference ===")
     names = list(models.keys())
@@ -193,8 +198,16 @@ def main():
             sig = "*" if mc["p_value"] < 0.05 else " "
             print(f"  {b} - {a}: diff={mean_diff:+.4f}  95% CI=[{lo:+.4f}, {hi:+.4f}]  "
                   f"McNemar p={mc['p_value']:.4f}{sig}  (n01={mc['n01']}, n10={mc['n10']})")
+            results["pairwise"].append({
+                "a": a, "b": b, "diff": mean_diff, "ci": [lo, hi],
+                "p_value": mc["p_value"], "n01": mc["n01"], "n10": mc["n10"],
+            })
 
     print("\n(* = McNemar p < 0.05)")
+
+    with open("pairwise_significance_caueeg_results.json", "w") as f:
+        json.dump(results, f, indent=2)
+    print("\nSaved to pairwise_significance_caueeg_results.json")
 
 
 if __name__ == "__main__":

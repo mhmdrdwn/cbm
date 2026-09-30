@@ -1,35 +1,4 @@
-"""
-Leakage analysis for CB-ShallowCNN (hybrid, residual=true) on TUAB (seed-42
-checkpoint, frozen -- no retraining of the backbone). Replaces the vague
-Limitations claim ("logistic regression on true concepts achieves ~4%
-lower accuracy, indicating moderate leakage") with a proper decomposition.
 
-Deliberately NOT run against CB-ShallowCNN-Plain (residual=false, see
-config_tuh_concept_bottleneck_plain.yaml): this analysis exists
-specifically to measure how much signal bypasses the concept bottleneck
-THROUGH THE RESIDUAL PATHWAY, which the Plain variant doesn't have by
-construction (no `residual_proj` attribute at all -- extract_features_shallow
-below would simply crash on it, not silently produce a meaningless
-number). For Plain, "concept-only" accuracy already equals the model's
-own combined/reported accuracy trivially (concepts are its only input),
-so there is nothing left to decompose; see run_pairwise_significance_tuh.py
-and intervention_experiment.py for the comparisons that DO include it.
-
-Extracts frozen (gated_concepts, residual) features for every train/eval
-sample, then trains THREE linear probes (matching the model's own
-nn.Linear(classifier_input, n_classes) classifier exactly, same
-class-weighted cross-entropy loss) on:
-  1. concept-only:  gated_concepts alone
-  2. residual-only: residual alone
-  3. combined:      [gated_concepts; residual] -- reproduces the model's own
-                     reported accuracy exactly, serving as a sanity check on
-                     the feature-extraction code.
-
-If concept-only accuracy is close to combined, the classifier's decisions
-are mostly explained by concepts (low leakage). If residual-only alone
-already recovers most of combined's accuracy, most of the signal bypasses
-the concept bottleneck (high leakage).
-"""
 import os
 import sys
 
@@ -62,21 +31,20 @@ def set_all_seeds(seed=42):
     random.seed(seed)
 
 
-def extract_features_shallow(model, loader, device, band_power_median, band_power_iqr):
-    """Returns (gated_concepts, residual, labels) as (N, C), (N, R), (N,) tensors."""
+def extract_features_shallow(model, loader, device, concept_median, concept_iqr):
+    """Returns (concepts, residual, labels) as (N, C), (N, R), (N,) tensors."""
     model.eval()
-    all_gated, all_resid, all_labels = [], [], []
+    all_concepts, all_resid, all_labels = [], [], []
     with torch.no_grad():
         for raw_batch in loader:
             x = raw_batch["raw_eeg"].to(device)
             feat = model.get_backbone_features(x)  # dropout is off in eval mode
             concepts = model.concept_predictor(feat)
-            gated = concepts * model.dead_mask
             resid = F.relu(model.residual_proj(feat))
-            all_gated.append(gated.cpu())
+            all_concepts.append(concepts.cpu())
             all_resid.append(resid.cpu())
             all_labels.extend(raw_batch["label"].tolist())
-    return torch.cat(all_gated), torch.cat(all_resid), torch.tensor(all_labels)
+    return torch.cat(all_concepts), torch.cat(all_resid), torch.tensor(all_labels)
 
 
 def train_probe(input_dim, n_classes, train_x, train_y, val_x, val_y, class_weights, device):
@@ -145,13 +113,13 @@ def run_for_backbone(name, model_cls, ckpt_path, config_path, extract_fn, model_
     model = model_cls(n_channels=d["n_channels"], **model_kwargs).to(device)
     ckpt = torch.load(ckpt_path, map_location=device)
     model.load_state_dict(ckpt["model_state"])
-    band_power_median = ckpt["band_power_median"].to(device)
-    band_power_iqr = ckpt["band_power_iqr"].to(device)
+    concept_median = ckpt["concept_median"].to(device)
+    concept_iqr = ckpt["concept_iqr"].to(device)
 
     print("extracting frozen features...", flush=True)
-    train_gated, train_resid, train_y = extract_fn(model, train_loader, device, band_power_median, band_power_iqr)
-    val_gated, val_resid, val_y = extract_fn(model, val_loader, device, band_power_median, band_power_iqr)
-    eval_gated, eval_resid, eval_y = extract_fn(model, eval_loader, device, band_power_median, band_power_iqr)
+    train_concepts, train_resid, train_y = extract_fn(model, train_loader, device, concept_median, concept_iqr)
+    val_concepts, val_resid, val_y = extract_fn(model, val_loader, device, concept_median, concept_iqr)
+    eval_concepts, eval_resid, eval_y = extract_fn(model, eval_loader, device, concept_median, concept_iqr)
 
     class_counts = np.bincount(train_y.numpy(), minlength=m["n_classes"]).astype(np.float32)
     inv_freq = len(train_y) / (m["n_classes"] * np.maximum(class_counts, 1))
@@ -159,11 +127,11 @@ def run_for_backbone(name, model_cls, ckpt_path, config_path, extract_fn, model_
 
     results = {}
     for probe_name, train_feat, val_feat, eval_feat in [
-        ("concept-only", train_gated, val_gated, eval_gated),
+        ("concept-only", train_concepts, val_concepts, eval_concepts),
         ("residual-only", train_resid, val_resid, eval_resid),
-        ("combined", torch.cat([train_gated, train_resid], dim=1),
-                     torch.cat([val_gated, val_resid], dim=1),
-                     torch.cat([eval_gated, eval_resid], dim=1)),
+        ("combined", torch.cat([train_concepts, train_resid], dim=1),
+                     torch.cat([val_concepts, val_resid], dim=1),
+                     torch.cat([eval_concepts, eval_resid], dim=1)),
     ]:
         print(f"training {probe_name} probe (dim={train_feat.shape[1]})...", flush=True)
         probe = train_probe(

@@ -14,7 +14,7 @@ model:
   n_classes: 2
   n_filters: 40
   dropout: 0.5
-  residual: false   # "Plain concept bottleneck" -- classifier sees ONLY the (gated) concept
+  residual: false   # "Plain concept bottleneck" -- classifier sees ONLY the concept
                       # vector, no residual escape hatch back to raw backbone features. This
                       # is the pure-CBM ablation article.tex's Table 1 (tab:params) already
                       # lists a parameter count for but never reports results for -- see
@@ -27,7 +27,7 @@ model:
                                                        # (distinct from CB-CNN's checkpoint/log, no collision)
 
 training:
-  epochs: 50
+  epochs: 20
   lr: 0.001
   weight_decay: 0.001
   lambda_concept: 0.5   # weight on the concept MSE loss vs classification cross-entropy.

@@ -4,13 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from scipy.signal import hilbert, welch
 
-# This project's ACTUAL channel order (data/tuh_e2e_loader.py's TARGET_CHANNELS)
-# -- NOT the ordering in the original proposal, which used a different
-# arrangement entirely. Using the wrong ordering wouldn't
-# crash; it would silently pull the wrong channels into each "region" (e.g. the
-# original proposal's "frontal" indices [0,1,2,3,4,5,6] map to FP1,FP2,F3,F4,C3,
-# C4,P3 under THIS project's real ordering -- a mix of frontal/central/parietal
-# channels, not frontal at all). Recomputed directly against TARGET_CHANNELS.
+
 CHANNEL_NAMES = ["FP1", "FP2", "F3", "F4", "C3", "C4", "P3", "P4", "O1", "O2",
                   "F7", "F8", "T3", "T4", "T5", "T6", "FZ", "PZ", "CZ", "A1", "A2"]
 
@@ -27,12 +21,7 @@ T3_IDX, T4_IDX = 12, 13
 O1_IDX, O2_IDX = 8, 9
 ASYM_PAIRS = [(F3_IDX, F4_IDX), (T3_IDX, T4_IDX), (O1_IDX, O2_IDX)]
 
-# CAUEEG (data/caueeg_e2e_loader.py's TARGET_CHANNELS) counterpart -- same 19
-# electrodes but a THIRD distinct ordering from both TUH/NMT and ds004504.
-# REGIONS/ASYM_PAIRS above were verified to reproduce byte-identical index
-# lists when re-derived programmatically from region/pair NAMES (not
-# hand-copied) -- REGIONS_CAUEEG uses that same name-based derivation against
-# CAUEEG's own channel order, not assumed by analogy to either other dataset.
+
 REGIONS_CAUEEG = {
     "frontal":   [0, 5, 1, 6, 10, 13, 16],   # FP1,FP2,F3,F4,F7,F8,FZ
     "temporal":  [11, 14, 12, 15],            # T3,T4,T5,T6
@@ -52,32 +41,21 @@ BANDS = {
 CONCEPT_NAMES = (
     [f"{r}_{b}" for r in REGIONS for b in BANDS] +
     ["frontal_alpha_asym", "temporal_alpha_asym", "posterior_alpha_asym",
-     "theta_alpha_ratio", "delta_alpha_ratio", "dtabr",
+     "theta_alpha_ratio", "dtabr",
      "alpha_peak_freq", "alpha_peak_amplitude",
      "frontal_alpha_plv", "temporal_alpha_plv", "posterior_alpha_plv"]
 )
-N_CONCEPTS = len(CONCEPT_NAMES)  # 31
-N_BAND_POWER_CONCEPTS = len(REGIONS) * len(BANDS)  # 20 -- the only family needing population normalization
-
-# Confirmed dead by the STRICTEST evidence available (a real run checking
-# Spearman rank correlation, not just R^2): not statistically significant (p>=0.05) against the
-# true concept value -- i.e., no detectable rank-order signal at all, not just a weak
-# one. NOTE this is a smaller, more precisely justified list than an earlier R^2<0.2
-# cutoff would have given -- several concepts that looked dead by R^2 alone
-# (central_alpha, posterior_alpha_asym, delta_alpha_ratio, dtabr, alpha_peak_amplitude)
-# turned out to have real, significant Spearman correlation once checked, so they are
-# NOT included here.
-DEAD_CONCEPT_NAMES = ["frontal_alpha", "temporal_alpha", "parietal_alpha", "frontal_alpha_asym"]
-DEAD_CONCEPT_INDICES = [CONCEPT_NAMES.index(n) for n in DEAD_CONCEPT_NAMES]
-
+# delta_alpha_ratio (DAR) was dropped: r=0.97-0.98 with dtabr on both datasets
+# (run/check_concept_quality.py's redundancy check) -- dtabr = (delta+theta)/
+# (alpha+beta) is the more complete "slow-vs-fast" index and subsumes DAR's
+# delta/alpha comparison as a special case; keeping both bought no independent
+# signal, just two copies of the same (also tanh-saturated, see that script's
+# low-variance check) concept.
+N_CONCEPTS = len(CONCEPT_NAMES)  # 30
+N_BAND_POWER_CONCEPTS = len(REGIONS) * len(BANDS)  # 20 -- used only to identify the band-power family (e.g. run/check_concept_quality.py); all families are population-normalized equally now (see compute_concept_norm)
 
 def _fft_bandpass(x, sfreq, lo, hi):
-    """
-    x: (..., T) real time-domain signal (numpy). Zero out all frequency
-    content outside [lo, hi) Hz via a hard mask in the frequency domain --
-    fixed/deterministic, same convention as this project's other analytical
-    concept computations (Welch PSD below): no learned filter to fail.
-    """
+
     T = x.shape[-1]
     X = np.fft.rfft(x, axis=-1)
     freqs = np.fft.rfftfreq(T, d=1.0 / sfreq)
@@ -86,14 +64,7 @@ def _fft_bandpass(x, sfreq, lo, hi):
 
 
 def _plv(sig_a, sig_b):
-    """
-    Phase-locking value between two REAL, 1-D, already narrowband-filtered
-    signals: PLV = |mean_t(exp(i*(phase_a(t) - phase_b(t))))|, using
-    scipy.signal.hilbert's analytic signal for instantaneous phase (a
-    standard EEG connectivity measure -- see compute_concepts_raw's
-    connectivity block for why narrowband filtering matters here).
-    Returns a scalar in [0, 1] (1 = perfectly phase-locked).
-    """
+
     phase_a = np.angle(hilbert(sig_a))
     phase_b = np.angle(hilbert(sig_b))
     return float(np.abs(np.mean(np.exp(1j * (phase_a - phase_b)))))
@@ -101,31 +72,7 @@ def _plv(sig_a, sig_b):
 
 def compute_concepts_raw(eeg, sfreq=100, regions=None, asym_pairs=None):
     """
-    Compute all N_CONCEPTS (31) clinical EEG concepts analytically.
-
-    eeg: (n_channels, n_samples) -- raw EEG in THIS project's channel order
-         and preprocessing (already band-passed 0.5-45Hz, CAR-referenced,
-         fixed-scale normalized). sfreq: this project's actual rate (100Hz
-         everywhere, NOT the original proposal's 256Hz default -- using the
-         wrong sfreq would silently misplace every frequency-band boundary
-         in the Welch PSD). regions/asym_pairs: which channel indices count
-         as which region/asymmetry pair -- default to REGIONS/ASYM_PAIRS
-         (TUH/NMT's 21-channel ordering); pass REGIONS_CAUEEG/ASYM_PAIRS_CAUEEG
-         for CAUEEG's different (19-channel) ordering. CONCEPT_NAMES stays
-         identical either way (region NAMES, not their channel indices,
-         drive it), only which channels a given concept is computed from.
-
-    Returns: (N_CONCEPTS,) float32 array. Family 1 (band power, indices 0-19) is
-    RAW log1p(power) here, NOT yet normalized -- population mean/std for
-    those 20 values should come from the training set (see
-    data/concept_cache.py), same convention as this project's age
-    normalization (compute_age_norm), not a per-subject self-relative
-    z-score (the original proposal's version, which changes what the
-    concept represents: "elevated relative to THIS subject's own other
-    bands" is not the same claim as "elevated relative to a normal
-    population," which is what these concepts are clinically meant to
-    capture). Asymmetry/ratio/spectral-structure concepts (indices 20-27)
-    are already self-contained/bounded and returned as-is.
+    Compute all N_CONCEPTS (30) clinical EEG concepts analytically.
     """
     regions = REGIONS if regions is None else regions
     asym_pairs = ASYM_PAIRS if asym_pairs is None else asym_pairs
@@ -164,7 +111,6 @@ def compute_concepts_raw(eeg, sfreq=100, regions=None, asym_pairs=None):
     beta_glob = psd[:, beta_mask].mean()
 
     concepts.append(np.tanh(np.log1p(theta_glob / (alpha_glob + 1e-8))))  # theta/alpha ratio
-    concepts.append(np.tanh(np.log1p(delta_glob / (alpha_glob + 1e-8))))  # delta/alpha ratio
     concepts.append(np.tanh(np.log1p((delta_glob + theta_glob) / (alpha_glob + beta_glob + 1e-8))))  # dtabr
 
     occ_psd = psd[regions["occipital"]].mean(axis=0)
@@ -178,19 +124,6 @@ def compute_concepts_raw(eeg, sfreq=100, regions=None, asym_pairs=None):
     peak_amp = occ_psd[alpha_mask].max() if alpha_mask.any() else 0.0
     concepts.append(np.tanh(np.log1p(peak_amp)))
 
-    # Family 5: functional connectivity (PLV), same channel pairs as the
-    # asymmetry family above (asym_pairs) but a DIFFERENT clinical question:
-    # asymmetry asks "which side has more power," this asks "do the two
-    # sides oscillate in step" -- reduced interhemispheric alpha-band phase
-    # synchrony is a separately well-documented EEG marker of dementia/AD,
-    # distinct from (and not derivable from) the power-asymmetry value.
-    # Alpha band specifically: PLV needs an approximately narrowband signal
-    # for instantaneous phase to be physiologically meaningful -- a
-    # broadband Hilbert phase mixes unrelated oscillations together, unlike
-    # the band-power family above (which pools raw broadband power, where
-    # that mixing isn't a problem). Already bounded in [0, 1] by
-    # construction (PLV magnitude), so -- like the asymmetry/ratio families
-    # -- no population normalization is needed (see normalize_concepts).
     alpha_sig = _fft_bandpass(eeg, sfreq, *BANDS["alpha"])
     for lo_idx, hi_idx in asym_pairs:
         concepts.append(_plv(alpha_sig[lo_idx], alpha_sig[hi_idx]))
@@ -200,51 +133,49 @@ def compute_concepts_raw(eeg, sfreq=100, regions=None, asym_pairs=None):
 
 def compute_concept_norm(raw_concepts, indices):
     """
-    raw_concepts: (n_subjects, N_CONCEPTS) tensor of ALL subjects' RAW concepts
-    (compute_concepts_raw's output, cached per-subject). indices: which
-    subjects (e.g. train_indices) to compute population statistics from.
-    Returns (median, iqr_scaled), each (N_BAND_POWER_CONCEPTS,) -- family
-    1 (band power) only; families 2-4 are already self-contained/bounded
-    and don't need this.
+    raw_concepts: (n_subjects, N_CONCEPTS) RAW concepts (compute_concepts_raw's
+    output, cached per-subject). indices: which subjects (e.g. train_indices)
+    to compute population statistics from. Returns (median, iqr_scaled), each
+    (N_CONCEPTS,) -- ALL concepts are standardized against their own
+    population statistics, not just band power.
 
-    ROBUST (median + IQR) statistics, not mean/std -- an earlier version
-    of this used mean/std (same convention as this project's age
-    regression normalization) and it was a real, confirmed bug: a real
-    run showed EVERY beta-band concept catastrophically failing (R^2 down
-    to -79.9), traced to population std being ~11x LARGER than the
-    entire P5-P95 raw value range for parietal_beta -- a small number of
-    extreme outliers (very plausibly EMG/muscle-artifact contamination, a
-    well-known source of excess beta-range power) inflated the non-robust
-    std estimate enough to crush z-scores for the vast majority of
-    subjects into a sliver near 0, which sigmoid then mapped to a
-    near-constant ~0.5 regardless of real underlying differences. Raw
-    beta's coefficient of variation was actually comparable to or higher
-    than alpha's (which normalized fine), confirming this was a
-    normalization artifact, not a genuine absence of signal. IQR/1.349
-    (the constant that makes IQR-based scale comparable to std under a
-    normal distribution, same convention as MAD-based robust z-scores)
-    is far less sensitive to a handful of contaminated recordings.
+    Previously only the 20 band-power concepts were standardized this way;
+    families 2-4 (asymmetry/ratio/peak/PLV) were passed through normalize_concepts
+    unchanged, since compute_concepts_raw already bounds them to [0,1)-ish via
+    their own fixed tanh/clip transforms. run/check_concept_quality.py's
+    low-variance check found this was exactly backwards: every concept that
+    showed pathologically low normalized variance (alpha_peak_amplitude, the 3
+    asymmetry concepts, dtabr, the 3 PLV concepts) was one of the unstandardized
+    ones -- a FIXED nonlinearity chosen without knowing where a given
+    population's values actually cluster can squash most subjects into a
+    narrow sub-range of its own output even though its theoretical range is
+    [0,1). Standardizing against the population's own median/IQR first
+    recenters that cluster onto sigmoid's steep, variance-preserving middle
+    zone regardless of the upstream nonlinearity -- exactly why band power
+    (the only family already treated this way) never showed this problem.
+
+    ROBUST (median + IQR) statistics, not mean/std -- see this project's
+    earlier band-power-only bug (population std blown up ~11x by a handful of
+    outlier recordings) for why; the same risk applies to every other family
+    too, so the same robust estimator is used uniformly now.
     """
-    family1 = raw_concepts[indices, :N_BAND_POWER_CONCEPTS]
-    median = family1.median(dim=0).values
-    q75 = family1.quantile(0.75, dim=0)
-    q25 = family1.quantile(0.25, dim=0)
+    family = raw_concepts[indices, :]
+    median = family.median(dim=0).values
+    q75 = family.quantile(0.75, dim=0)
+    q25 = family.quantile(0.25, dim=0)
     iqr_scaled = ((q75 - q25) / 1.349).clamp(min=1e-6)
     return median, iqr_scaled
 
 
-def normalize_concepts(concepts_raw, band_power_median, band_power_iqr):
+def normalize_concepts(concepts_raw, concept_median, concept_iqr):
     """
-    concepts_raw: (..., N_CONCEPTS) raw concepts. Applies population sigmoid
-    normalization to family 1 (indices 0:N_BAND_POWER_CONCEPTS) using
-    the ROBUST stats from compute_concept_norm (median + IQR/1.349, not
-    mean/std -- see that function's docstring for why); leaves families
-    2-4 (already bounded in [0,1] or [0,1) by construction) unchanged.
-    Returns (..., N_CONCEPTS).
+    concepts_raw: (..., N_CONCEPTS) raw concepts. Applies population-relative
+    robust standardization (median + IQR/1.349, from compute_concept_norm)
+    followed by a sigmoid squash to ALL N_CONCEPTS concepts uniformly --
+    see compute_concept_norm's docstring for why this replaced the earlier
+    band-power-only treatment. Returns (..., N_CONCEPTS).
     """
-    family1 = concepts_raw[..., :N_BAND_POWER_CONCEPTS]
-    family1_norm = torch.sigmoid((family1 - band_power_median) / band_power_iqr)
-    return torch.cat([family1_norm, concepts_raw[..., N_BAND_POWER_CONCEPTS:]], dim=-1)
+    return torch.sigmoid((concepts_raw - concept_median) / concept_iqr)
 
 
 class ConceptBottleneckShallowCNN(nn.Module):
@@ -252,24 +183,11 @@ class ConceptBottleneckShallowCNN(nn.Module):
     ShallowCNN backbone -> concept bottleneck -> classifier. Same proven
     backbone (temporal_conv -> spatial_conv -> bn -> square -> pool ->
     log -> global_pool) as models/shallow_cnn.py's ShallowConvNet, feeding
-    a small head that predicts the N_CONCEPTS clinical concepts, which the
-    classifier then consumes INSTEAD OF the raw CNN features directly --
-    this routing-through-concepts is what makes intervention (a clinician
-    overriding a wrong concept prediction and re-running the classifier)
-    meaningful; if the classifier saw raw features too, an intervention
-    on a concept could be ignored by the classifier via a shortcut through
-    the untouched raw path.
-
-    Small residual path (n_filters//4 dims, bypassing the bottleneck) is
-    included to absorb concept incompleteness without destroying accuracy
-    entirely -- but note this directly trades off against intervention
-    meaningfulness (concepts no longer fully determine the output), which
-    is worth checking empirically (the leakage test) rather than assuming.
+    a small head that predicts the N_CONCEPTS clinical concepts.
     """
 
     def __init__(self, n_channels, n_classes=2, n_filters=40, filter_time_length=25,
-                 pool_time_length=75, pool_time_stride=15, dropout=0.5, residual=True,
-                 dead_concept_indices=None):
+                 pool_time_length=75, pool_time_stride=15, dropout=0.5, residual=True):
         super().__init__()
         self.residual = residual
         self.temporal_conv = nn.Conv2d(1, n_filters, kernel_size=(1, filter_time_length))
@@ -283,16 +201,6 @@ class ConceptBottleneckShallowCNN(nn.Module):
             nn.Linear(n_filters, 64), nn.ReLU(), nn.Dropout(0.3),
             nn.Linear(64, N_CONCEPTS), nn.Sigmoid(),
         )
-
-        # fixed (non-learnable) hard mask for confirmed-dead concepts. Defaults to
-        # DEAD_CONCEPT_INDICES (TUH's own confirmed-dead list, see its docstring) for
-        # backward compatibility, but this is an empirical finding specific to TUH's
-        # population -- pass dead_concept_indices=[] (or a separately-verified list)
-        # for a different dataset rather than assuming TUH's findings transfer.
-        dead_concept_indices = DEAD_CONCEPT_INDICES if dead_concept_indices is None else dead_concept_indices
-        dead_mask = torch.ones(N_CONCEPTS)
-        dead_mask[dead_concept_indices] = 0.0
-        self.register_buffer("dead_mask", dead_mask)
 
         if residual:
             residual_dim = n_filters // 4
@@ -313,14 +221,7 @@ class ConceptBottleneckShallowCNN(nn.Module):
         return self.global_pool(x).flatten(1)  # (batch, n_filters)
 
     def forward(self, x, lengths=None, intervention=None):
-        """
-        x: (batch, n_ch, n_samples)
-        intervention: optional dict {concept_idx: value} -- value can be a
-            python scalar (applies to every sample in the batch) or a
-            (batch,) tensor (per-sample override, e.g. substituting each
-            sample's own true concept value).
-        Returns: logits (batch, n_classes), concepts (batch, N_CONCEPTS)
-        """
+
         feat = self.dropout(self.get_backbone_features(x))
         concepts = self.concept_predictor(feat)
 
@@ -329,16 +230,11 @@ class ConceptBottleneckShallowCNN(nn.Module):
             for idx, val in intervention.items():
                 concepts[:, idx] = val
 
-        # dead-concept mask applies to what the CLASSIFIER sees, not to the returned
-        # `concepts` (which stays the model's actual belief, for R^2/Spearman/reporting
-        # purposes).
-        gated_concepts = concepts * self.dead_mask
-
         if self.residual:
             resid = F.relu(self.residual_proj(feat))
-            classifier_input = torch.cat([gated_concepts, resid], dim=-1)
+            classifier_input = torch.cat([concepts, resid], dim=-1)
         else:
-            classifier_input = gated_concepts
+            classifier_input = concepts
 
         logits = self.classifier(classifier_input)
         return logits, concepts

@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader, Subset
 from data.tuh_e2e_loader import TUHEndToEndDataset
 from data.tuh_concepts_loader import TUHWithConceptsDataset, collate_tuh_concepts
 from models.concept_bottleneck import (
-    CONCEPT_NAMES, DEAD_CONCEPT_INDICES, N_CONCEPTS, ConceptBottleneckShallowCNN,
+    CONCEPT_NAMES, N_CONCEPTS, ConceptBottleneckShallowCNN,
     compute_concept_norm, normalize_concepts,
 )
 from train_utils import checkpoint_path, split_validation, tee_stdout_to_file
@@ -25,7 +25,7 @@ from utils.metrics import compute_loso_metrics
 
 
 def compute_concept_norm_from_dataset(ds, indices):
-    """Loops the dataset to build a (len(indices), 28) raw-concepts tensor,
+    """Loops the dataset to build a (len(indices), N_CONCEPTS) raw-concepts tensor,
     then computes robust population median/IQR for the band-power family
     only (see compute_concept_norm's docstring). Cheap: concepts are
     cached after the first access (~7ms/subject measured directly), so
@@ -66,8 +66,8 @@ def train_and_evaluate(cfg, device):
 
     print("computing population concept normalization from train subjects...", flush=True)
     t0 = time.time()
-    band_power_median, band_power_iqr = compute_concept_norm_from_dataset(train_ds, train_indices)
-    band_power_median, band_power_iqr = band_power_median.to(device), band_power_iqr.to(device)
+    concept_median, concept_iqr = compute_concept_norm_from_dataset(train_ds, train_indices)
+    concept_median, concept_iqr = concept_median.to(device), concept_iqr.to(device)
     print(f"  done in {time.time()-t0:.1f}s", flush=True)
 
     checkpoint_name = m.get("checkpoint_name", "tuh_concept_bottleneck")
@@ -93,15 +93,6 @@ def train_and_evaluate(cfg, device):
     best_state = None
     val_ema = None
 
-    # concept loss excludes the 4 confirmed-dead concepts (see DEAD_CONCEPT_INDICES's
-    # docstring) -- no point spending gradient fitting pure noise; the model's classifier
-    # never sees them either (models/concept_bottleneck.py's dead_mask handles that side).
-    live_concept_idx = torch.tensor(
-        [i for i in range(len(CONCEPT_NAMES)) if i not in DEAD_CONCEPT_INDICES], device=device,
-    )
-    print(f"excluding {len(DEAD_CONCEPT_INDICES)} confirmed-dead concepts from the concept loss: "
-          f"{[CONCEPT_NAMES[i] for i in DEAD_CONCEPT_INDICES]}", flush=True)
-
     train_loader = DataLoader(
         Subset(train_ds, train_indices), batch_size=batch_size, shuffle=True, collate_fn=collate_tuh_concepts,
     )
@@ -119,12 +110,12 @@ def train_and_evaluate(cfg, device):
             x = raw_batch["raw_eeg"].to(device)
             labels = raw_batch["label"].to(device)
             true_concepts = normalize_concepts(
-                raw_batch["concepts_raw"].to(device), band_power_median, band_power_iqr,
+                raw_batch["concepts_raw"].to(device), concept_median, concept_iqr,
             )
 
             logits, pred_concepts = model(x)
             l_cls = F.cross_entropy(logits, labels, weight=class_weights)
-            l_conc = F.mse_loss(pred_concepts[:, live_concept_idx], true_concepts[:, live_concept_idx])
+            l_conc = F.mse_loss(pred_concepts, true_concepts)
             loss = l_cls + lambda_concept * l_conc
 
             optim.zero_grad()
@@ -177,7 +168,7 @@ def train_and_evaluate(cfg, device):
     torch.save({
         "model_state": model.state_dict(), "best_epoch": int(best_epoch),
         "best_val_bal_acc": float(best_val_acc),
-        "band_power_median": band_power_median.cpu(), "band_power_iqr": band_power_iqr.cpu(),
+        "concept_median": concept_median.cpu(), "concept_iqr": concept_iqr.cpu(),
     }, checkpoint_path(f"{checkpoint_name}_best_model.pt"))
 
     model.eval()
@@ -187,7 +178,7 @@ def train_and_evaluate(cfg, device):
         for raw_batch in eval_loader:
             x = raw_batch["raw_eeg"].to(device)
             true_concepts = normalize_concepts(
-                raw_batch["concepts_raw"].to(device), band_power_median, band_power_iqr,
+                raw_batch["concepts_raw"].to(device), concept_median, concept_iqr,
             )
             logits, pred_concepts = model(x)
             all_preds.extend(logits.argmax(dim=1).cpu().tolist())

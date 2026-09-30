@@ -36,11 +36,8 @@ def train_and_evaluate(cfg, device):
     REGIONS_CAUEEG/ASYM_PAIRS_CAUEEG (CAUEEGWithConceptsDataset), since
     CAUEEG's 19-channel ordering differs from both TUH/NMT's and ds004504's.
 
-    Like the ds004504 scripts, NO concepts are hard-masked here
-    (dead_concept_indices=[]): DEAD_CONCEPT_INDICES is an empirical finding
-    from TUH's own population and isn't assumed to transfer without
-    separately checking via check_concept_rank_correlation.py-style analysis
-    against this dataset's own checkpoint.
+    All N_CONCEPTS concepts are used as supervised targets and by the
+    classifier -- no concepts are excluded from training.
     """
     m, t, d = cfg["model"], cfg["training"], cfg["data"]
     task = d["task"]
@@ -70,8 +67,8 @@ def train_and_evaluate(cfg, device):
 
     print("computing population concept normalization from train subjects...", flush=True)
     t0 = time.time()
-    band_power_median, band_power_iqr = compute_concept_norm_from_dataset(train_ds, list(range(len(train_ds))))
-    band_power_median, band_power_iqr = band_power_median.to(device), band_power_iqr.to(device)
+    concept_median, concept_iqr = compute_concept_norm_from_dataset(train_ds, list(range(len(train_ds))))
+    concept_median, concept_iqr = concept_median.to(device), concept_iqr.to(device)
     print(f"  done in {time.time()-t0:.1f}s", flush=True)
 
     print("computing per-channel EEG normalization from train windows...", flush=True)
@@ -83,7 +80,6 @@ def train_and_evaluate(cfg, device):
     model = ConceptBottleneckShallowCNN(
         n_channels=d["n_channels"], n_classes=m["n_classes"], n_filters=m.get("n_filters", 40),
         dropout=m.get("dropout", 0.5), residual=m.get("residual", True),
-        dead_concept_indices=[],  # no dead concepts confirmed for this dataset yet.
     ).to(device)
     optim = torch.optim.Adam(model.parameters(), lr=t["lr"], weight_decay=t["weight_decay"])
 
@@ -116,7 +112,7 @@ def train_and_evaluate(cfg, device):
             x = normalize_eeg(raw_batch["raw_eeg"].to(device), eeg_mean, eeg_std)
             labels = raw_batch["label"].to(device)
             true_concepts = normalize_concepts(
-                raw_batch["concepts_raw"].to(device), band_power_median, band_power_iqr,
+                raw_batch["concepts_raw"].to(device), concept_median, concept_iqr,
             )
 
             logits, pred_concepts = model(x)
@@ -172,7 +168,7 @@ def train_and_evaluate(cfg, device):
     torch.save({
         "model_state": model.state_dict(), "best_epoch": int(best_epoch),
         "best_val_bal_acc": float(best_val_acc),
-        "band_power_median": band_power_median.cpu(), "band_power_iqr": band_power_iqr.cpu(),
+        "concept_median": concept_median.cpu(), "concept_iqr": concept_iqr.cpu(),
     }, checkpoint_path(f"{checkpoint_name}_best_model.pt"))
 
     model.eval()
@@ -182,7 +178,7 @@ def train_and_evaluate(cfg, device):
         for raw_batch in eval_loader:
             x = normalize_eeg(raw_batch["raw_eeg"].to(device), eeg_mean, eeg_std)
             true_concepts = normalize_concepts(
-                raw_batch["concepts_raw"].to(device), band_power_median, band_power_iqr,
+                raw_batch["concepts_raw"].to(device), concept_median, concept_iqr,
             )
             logits, pred_concepts = model(x)
             all_probs.extend(F.softmax(logits, dim=-1).cpu().tolist())
