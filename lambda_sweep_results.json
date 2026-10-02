@@ -1,0 +1,666 @@
+{
+  "tuh": {
+    "lambda5": {
+      "training_per_seed": {
+        "42": {
+          "accuracy": 0.8405797101449275,
+          "f1": 0.8384012962462869,
+          "sensitivity": 0.7380952380952381,
+          "specificity": 0.9266666666666666,
+          "concept_r2": {
+            "frontal_delta": 0.3247528076171875,
+            "frontal_theta": 0.4199560880661011,
+            "frontal_alpha": 0.6860383749008179,
+            "frontal_beta": 0.41610515117645264,
+            "temporal_delta": 0.47507691383361816,
+            "temporal_theta": 0.6019760966300964,
+            "temporal_alpha": 0.6885989904403687,
+            "temporal_beta": 0.32099270820617676,
+            "central_delta": 0.465864896774292,
+            "central_theta": 0.16481930017471313,
+            "central_alpha": 0.6022852659225464,
+            "central_beta": 0.3484928011894226,
+            "parietal_delta": 0.41678547859191895,
+            "parietal_theta": 0.552153468132019,
+            "parietal_alpha": 0.5208267569541931,
+            "parietal_beta": 0.3963126540184021,
+            "occipital_delta": 0.36664879322052,
+            "occipital_theta": 0.5124162435531616,
+            "occipital_alpha": 0.7569174766540527,
+            "occipital_beta": 0.5578476190567017,
+            "frontal_alpha_asym": -0.05521225929260254,
+            "temporal_alpha_asym": -0.04234945774078369,
+            "posterior_alpha_asym": -0.3589668273925781,
+            "theta_alpha_ratio": 0.6123117208480835,
+            "dtabr": 0.3167595863342285,
+            "alpha_peak_freq": 0.4723760485649109,
+            "alpha_peak_amplitude": 0.765342652797699,
+            "frontal_alpha_plv": 0.6451305747032166,
+            "temporal_alpha_plv": 0.19958442449569702,
+            "posterior_alpha_plv": 0.1237417459487915
+          }
+        },
+        "43": {
+          "accuracy": 0.8405797101449275,
+          "f1": 0.8374204665959702,
+          "sensitivity": 0.7142857142857143,
+          "specificity": 0.9466666666666667,
+          "concept_r2": {
+            "frontal_delta": 0.29827964305877686,
+            "frontal_theta": 0.33606159687042236,
+            "frontal_alpha": 0.6596713066101074,
+            "frontal_beta": 0.3397197723388672,
+            "temporal_delta": 0.29856306314468384,
+            "temporal_theta": 0.5442956686019897,
+            "temporal_alpha": 0.6667894721031189,
+            "temporal_beta": 0.3197682499885559,
+            "central_delta": 0.49731898307800293,
+            "central_theta": 0.5900471806526184,
+            "central_alpha": 0.6069409847259521,
+            "central_beta": 0.3348734378814697,
+            "parietal_delta": 0.5130231976509094,
+            "parietal_theta": 0.23632025718688965,
+            "parietal_alpha": 0.4086735248565674,
+            "parietal_beta": 0.4158075451850891,
+            "occipital_delta": 0.34004104137420654,
+            "occipital_theta": 0.4332805871963501,
+            "occipital_alpha": 0.6912267208099365,
+            "occipital_beta": 0.5498416423797607,
+            "frontal_alpha_asym": 0.01470327377319336,
+            "temporal_alpha_asym": -0.0065500736236572266,
+            "posterior_alpha_asym": 0.055472612380981445,
+            "theta_alpha_ratio": 0.6148586869239807,
+            "dtabr": 0.315321147441864,
+            "alpha_peak_freq": 0.14612174034118652,
+            "alpha_peak_amplitude": 0.6946740746498108,
+            "frontal_alpha_plv": 0.6052478551864624,
+            "temporal_alpha_plv": 0.20005035400390625,
+            "posterior_alpha_plv": 0.1223638653755188
+          }
+        },
+        "44": {
+          "accuracy": 0.8442028985507246,
+          "f1": 0.8401844369682369,
+          "sensitivity": 0.6984126984126984,
+          "specificity": 0.9666666666666667,
+          "concept_r2": {
+            "frontal_delta": 0.2612121105194092,
+            "frontal_theta": 0.5001349449157715,
+            "frontal_alpha": 0.580791711807251,
+            "frontal_beta": 0.3198952078819275,
+            "temporal_delta": 0.11183351278305054,
+            "temporal_theta": 0.6724557280540466,
+            "temporal_alpha": 0.6068141460418701,
+            "temporal_beta": 0.29562002420425415,
+            "central_delta": 0.28735899925231934,
+            "central_theta": 0.6359813213348389,
+            "central_alpha": 0.5341073870658875,
+            "central_beta": 0.3919723629951477,
+            "parietal_delta": 0.4358053207397461,
+            "parietal_theta": 0.5347241759300232,
+            "parietal_alpha": 0.42150676250457764,
+            "parietal_beta": 0.4266859292984009,
+            "occipital_delta": 0.2420840859413147,
+            "occipital_theta": 0.510453462600708,
+            "occipital_alpha": 0.7115846872329712,
+            "occipital_beta": 0.5848500728607178,
+            "frontal_alpha_asym": -0.0005954504013061523,
+            "temporal_alpha_asym": -0.01941680908203125,
+            "posterior_alpha_asym": 0.036916136741638184,
+            "theta_alpha_ratio": 0.5849496722221375,
+            "dtabr": 0.22447502613067627,
+            "alpha_peak_freq": 0.4270467162132263,
+            "alpha_peak_amplitude": 0.6679072380065918,
+            "frontal_alpha_plv": 0.21709728240966797,
+            "temporal_alpha_plv": 0.19383102655410767,
+            "posterior_alpha_plv": 0.11410540342330933
+          }
+        }
+      },
+      "intervention_per_seed": {
+        "42": {
+          "baseline": {
+            "accuracy": 0.8405797101449275,
+            "f1": 0.8384012962462869,
+            "sensitivity": 0.7380952380952381,
+            "specificity": 0.9266666666666666
+          },
+          "full_intervention_accuracy": 0.7028985507246377,
+          "gain": -0.1376811594202898,
+          "n_concepts": 30
+        },
+        "43": {
+          "baseline": {
+            "accuracy": 0.8405797101449275,
+            "f1": 0.8374204665959702,
+            "sensitivity": 0.7142857142857143,
+            "specificity": 0.9466666666666667
+          },
+          "full_intervention_accuracy": 0.7536231884057971,
+          "gain": -0.08695652173913038,
+          "n_concepts": 30
+        },
+        "44": {
+          "baseline": {
+            "accuracy": 0.8442028985507246,
+            "f1": 0.8401844369682369,
+            "sensitivity": 0.6984126984126984,
+            "specificity": 0.9666666666666667
+          },
+          "full_intervention_accuracy": 0.6920289855072463,
+          "gain": -0.15217391304347827,
+          "n_concepts": 30
+        }
+      },
+      "summary": {
+        "accuracy_mean": 0.8417874396135265,
+        "accuracy_std": 0.0017079873941704122,
+        "concept_r2_mean": 0.39587313003010216,
+        "concept_r2_std": 0.010391153041510892,
+        "intervention_baseline_accuracy_mean": 0.8417874396135265,
+        "intervention_baseline_accuracy_std": 0.0017079873941704122,
+        "intervention_full_accuracy_mean": 0.716183574879227,
+        "intervention_full_accuracy_std": 0.026843128950353724,
+        "intervention_gain_mean": -0.1256038647342995,
+        "intervention_gain_std": 0.02796095870239187
+      }
+    },
+    "lambda20": {
+      "training_per_seed": {
+        "42": {
+          "accuracy": 0.8043478260869565,
+          "f1": 0.7973990252376586,
+          "sensitivity": 0.626984126984127,
+          "specificity": 0.9533333333333334,
+          "concept_r2": {
+            "frontal_delta": 0.5223464965820312,
+            "frontal_theta": 0.5785362720489502,
+            "frontal_alpha": 0.729493260383606,
+            "frontal_beta": 0.5304677486419678,
+            "temporal_delta": 0.5923097729682922,
+            "temporal_theta": 0.701641321182251,
+            "temporal_alpha": 0.7448413968086243,
+            "temporal_beta": 0.5096414685249329,
+            "central_delta": 0.5208481550216675,
+            "central_theta": 0.586536705493927,
+            "central_alpha": 0.6503708362579346,
+            "central_beta": 0.5662373304367065,
+            "parietal_delta": 0.5739977359771729,
+            "parietal_theta": 0.6125307679176331,
+            "parietal_alpha": 0.644250750541687,
+            "parietal_beta": 0.6050824522972107,
+            "occipital_delta": 0.4850063920021057,
+            "occipital_theta": 0.6341984272003174,
+            "occipital_alpha": 0.8742827773094177,
+            "occipital_beta": 0.7029784321784973,
+            "frontal_alpha_asym": 0.014987647533416748,
+            "temporal_alpha_asym": 0.006379067897796631,
+            "posterior_alpha_asym": 0.05932056903839111,
+            "theta_alpha_ratio": 0.6997136473655701,
+            "dtabr": 0.5509887337684631,
+            "alpha_peak_freq": 0.4733797311782837,
+            "alpha_peak_amplitude": 0.8393296003341675,
+            "frontal_alpha_plv": 0.687772810459137,
+            "temporal_alpha_plv": 0.23945993185043335,
+            "posterior_alpha_plv": 0.16178280115127563
+          }
+        },
+        "43": {
+          "accuracy": 0.8297101449275363,
+          "f1": 0.8272214224792371,
+          "sensitivity": 0.7222222222222222,
+          "specificity": 0.92,
+          "concept_r2": {
+            "frontal_delta": 0.5655895471572876,
+            "frontal_theta": 0.563434362411499,
+            "frontal_alpha": 0.7108356952667236,
+            "frontal_beta": 0.4607330560684204,
+            "temporal_delta": 0.5948137044906616,
+            "temporal_theta": 0.6846932172775269,
+            "temporal_alpha": 0.7282052040100098,
+            "temporal_beta": 0.44183027744293213,
+            "central_delta": 0.5880333185195923,
+            "central_theta": 0.6738225221633911,
+            "central_alpha": 0.6551471948623657,
+            "central_beta": 0.49454957246780396,
+            "parietal_delta": 0.6364405155181885,
+            "parietal_theta": 0.5911608934402466,
+            "parietal_alpha": 0.5983902812004089,
+            "parietal_beta": 0.5472226738929749,
+            "occipital_delta": 0.5298449993133545,
+            "occipital_theta": 0.6028204560279846,
+            "occipital_alpha": 0.8614878058433533,
+            "occipital_beta": 0.6392056345939636,
+            "frontal_alpha_asym": 0.019700050354003906,
+            "temporal_alpha_asym": -0.002779841423034668,
+            "posterior_alpha_asym": 0.07320022583007812,
+            "theta_alpha_ratio": 0.6907542943954468,
+            "dtabr": 0.534719705581665,
+            "alpha_peak_freq": 0.4477575421333313,
+            "alpha_peak_amplitude": 0.8248109221458435,
+            "frontal_alpha_plv": 0.6912502646446228,
+            "temporal_alpha_plv": 0.20675122737884521,
+            "posterior_alpha_plv": 0.14817488193511963
+          }
+        },
+        "44": {
+          "accuracy": 0.8260869565217391,
+          "f1": 0.8240254872563717,
+          "sensitivity": 0.7301587301587301,
+          "specificity": 0.9066666666666666,
+          "concept_r2": {
+            "frontal_delta": 0.5226343870162964,
+            "frontal_theta": 0.596164345741272,
+            "frontal_alpha": 0.6916714906692505,
+            "frontal_beta": 0.5801467895507812,
+            "temporal_delta": 0.5102803111076355,
+            "temporal_theta": 0.7260364890098572,
+            "temporal_alpha": 0.7202653288841248,
+            "temporal_beta": 0.5680119395256042,
+            "central_delta": 0.5226896405220032,
+            "central_theta": 0.6658916473388672,
+            "central_alpha": 0.6306207180023193,
+            "central_beta": 0.6326868534088135,
+            "parietal_delta": 0.5757973790168762,
+            "parietal_theta": 0.6265789866447449,
+            "parietal_alpha": 0.5924683809280396,
+            "parietal_beta": 0.6649243831634521,
+            "occipital_delta": 0.46185731887817383,
+            "occipital_theta": 0.6218400001525879,
+            "occipital_alpha": 0.8462117910385132,
+            "occipital_beta": 0.695381760597229,
+            "frontal_alpha_asym": 0.013804614543914795,
+            "temporal_alpha_asym": -0.005187392234802246,
+            "posterior_alpha_asym": 0.06041628122329712,
+            "theta_alpha_ratio": 0.6960508823394775,
+            "dtabr": 0.5297048091888428,
+            "alpha_peak_freq": 0.4676781892776489,
+            "alpha_peak_amplitude": 0.8134247660636902,
+            "frontal_alpha_plv": 0.6547211408615112,
+            "temporal_alpha_plv": 0.2190219759941101,
+            "posterior_alpha_plv": 0.15213263034820557
+          }
+        }
+      },
+      "intervention_per_seed": {
+        "42": {
+          "baseline": {
+            "accuracy": 0.8043478260869565,
+            "f1": 0.7973990252376586,
+            "sensitivity": 0.626984126984127,
+            "specificity": 0.9533333333333334
+          },
+          "full_intervention_accuracy": 0.75,
+          "gain": -0.05434782608695654,
+          "n_concepts": 30
+        },
+        "43": {
+          "baseline": {
+            "accuracy": 0.8297101449275363,
+            "f1": 0.8272214224792371,
+            "sensitivity": 0.7222222222222222,
+            "specificity": 0.92
+          },
+          "full_intervention_accuracy": 0.7681159420289855,
+          "gain": -0.061594202898550776,
+          "n_concepts": 30
+        },
+        "44": {
+          "baseline": {
+            "accuracy": 0.8260869565217391,
+            "f1": 0.8240254872563717,
+            "sensitivity": 0.7301587301587301,
+            "specificity": 0.9066666666666666
+          },
+          "full_intervention_accuracy": 0.7391304347826086,
+          "gain": -0.08695652173913049,
+          "n_concepts": 30
+        }
+      },
+      "summary": {
+        "accuracy_mean": 0.8200483091787439,
+        "accuracy_std": 0.011200022337555196,
+        "concept_r2_mean": 0.5328360120455424,
+        "concept_r2_std": 0.004344062289405195,
+        "intervention_baseline_accuracy_mean": 0.8200483091787439,
+        "intervention_baseline_accuracy_std": 0.011200022337555196,
+        "intervention_full_accuracy_mean": 0.752415458937198,
+        "intervention_full_accuracy_std": 0.011955911759192837,
+        "intervention_gain_mean": -0.06763285024154593,
+        "intervention_gain_std": 0.013980479351195936
+      }
+    }
+  },
+  "caueeg": {
+    "lambda5": {
+      "training_per_seed": {
+        "42": {
+          "accuracy": 0.4915254237288136,
+          "f1": 0.5004311643444876,
+          "sensitivity": 0.501049042748492,
+          "specificity": 0.7452148745252193,
+          "concept_r2": {
+            "frontal_delta": 0.09741592407226562,
+            "frontal_theta": 0.5663230419158936,
+            "frontal_alpha": 0.8437714576721191,
+            "frontal_beta": 0.4906073212623596,
+            "temporal_delta": 0.2581295371055603,
+            "temporal_theta": 0.8175410628318787,
+            "temporal_alpha": 0.8157458305358887,
+            "temporal_beta": 0.7203401327133179,
+            "central_delta": 0.2950384020805359,
+            "central_theta": 0.8238515853881836,
+            "central_alpha": 0.8976047039031982,
+            "central_beta": 0.6892001628875732,
+            "parietal_delta": 0.2905600070953369,
+            "parietal_theta": 0.8442919254302979,
+            "parietal_alpha": 0.8619988560676575,
+            "parietal_beta": 0.8143583536148071,
+            "occipital_delta": 0.21378135681152344,
+            "occipital_theta": 0.7766802310943604,
+            "occipital_alpha": 0.8026253581047058,
+            "occipital_beta": 0.8158199191093445,
+            "frontal_alpha_asym": -0.01599133014678955,
+            "temporal_alpha_asym": -0.001778721809387207,
+            "posterior_alpha_asym": 0.015982985496520996,
+            "theta_alpha_ratio": 0.6657474040985107,
+            "dtabr": 0.258378803730011,
+            "alpha_peak_freq": 0.23418909311294556,
+            "alpha_peak_amplitude": 0.6813580989837646,
+            "frontal_alpha_plv": 0.5133020281791687,
+            "temporal_alpha_plv": 0.029753446578979492,
+            "posterior_alpha_plv": 0.031194567680358887
+          }
+        },
+        "43": {
+          "accuracy": 0.5254237288135594,
+          "f1": 0.5236363636363636,
+          "sensitivity": 0.53439605924811,
+          "specificity": 0.767009172181586,
+          "concept_r2": {
+            "frontal_delta": 0.08106285333633423,
+            "frontal_theta": 0.7040196657180786,
+            "frontal_alpha": 0.7748619318008423,
+            "frontal_beta": 0.49813514947891235,
+            "temporal_delta": 0.2136961817741394,
+            "temporal_theta": 0.8299070000648499,
+            "temporal_alpha": 0.820967972278595,
+            "temporal_beta": 0.7114261388778687,
+            "central_delta": 0.19214463233947754,
+            "central_theta": 0.8196826577186584,
+            "central_alpha": 0.8734471797943115,
+            "central_beta": 0.6592990159988403,
+            "parietal_delta": 0.32178795337677,
+            "parietal_theta": 0.8260585069656372,
+            "parietal_alpha": 0.8427367210388184,
+            "parietal_beta": 0.8231526613235474,
+            "occipital_delta": 0.11979866027832031,
+            "occipital_theta": 0.7439613938331604,
+            "occipital_alpha": 0.767819344997406,
+            "occipital_beta": 0.7612807154655457,
+            "frontal_alpha_asym": -0.02810680866241455,
+            "temporal_alpha_asym": -0.04298758506774902,
+            "posterior_alpha_asym": 0.030719518661499023,
+            "theta_alpha_ratio": 0.4993090033531189,
+            "dtabr": 0.5386677384376526,
+            "alpha_peak_freq": 0.29396307468414307,
+            "alpha_peak_amplitude": 0.6203104257583618,
+            "frontal_alpha_plv": 0.38872939348220825,
+            "temporal_alpha_plv": 0.019850611686706543,
+            "posterior_alpha_plv": 0.13058054447174072
+          }
+        },
+        "44": {
+          "accuracy": 0.5338983050847458,
+          "f1": 0.5425282442629246,
+          "sensitivity": 0.5487120719734546,
+          "specificity": 0.7691612346784761,
+          "concept_r2": {
+            "frontal_delta": 0.11897575855255127,
+            "frontal_theta": 0.656004011631012,
+            "frontal_alpha": 0.8306471705436707,
+            "frontal_beta": 0.4888799786567688,
+            "temporal_delta": 0.30213433504104614,
+            "temporal_theta": 0.7139664888381958,
+            "temporal_alpha": 0.802314281463623,
+            "temporal_beta": 0.6801258325576782,
+            "central_delta": 0.33125627040863037,
+            "central_theta": 0.8127697706222534,
+            "central_alpha": 0.7989038228988647,
+            "central_beta": 0.6601752638816833,
+            "parietal_delta": 0.3346322178840637,
+            "parietal_theta": 0.8017400503158569,
+            "parietal_alpha": 0.8468945026397705,
+            "parietal_beta": 0.7748777270317078,
+            "occipital_delta": 0.12054842710494995,
+            "occipital_theta": 0.7519367337226868,
+            "occipital_alpha": 0.761124849319458,
+            "occipital_beta": 0.7450194358825684,
+            "frontal_alpha_asym": -0.01747739315032959,
+            "temporal_alpha_asym": -0.012668371200561523,
+            "posterior_alpha_asym": 0.03699010610580444,
+            "theta_alpha_ratio": 0.40396010875701904,
+            "dtabr": 0.5547038316726685,
+            "alpha_peak_freq": 0.09207040071487427,
+            "alpha_peak_amplitude": 0.6474038362503052,
+            "frontal_alpha_plv": 0.5202441215515137,
+            "temporal_alpha_plv": -0.02620375156402588,
+            "posterior_alpha_plv": -0.002428412437438965
+          }
+        }
+      },
+      "intervention_per_seed": {
+        "42": {
+          "baseline": {
+            "accuracy": 0.4915254237288136,
+            "f1": 0.5004311643444876,
+            "sensitivity": 0.501049042748492,
+            "specificity": 0.7452148745252193
+          },
+          "full_intervention_accuracy": 0.423728813559322,
+          "gain": -0.06779661016949157,
+          "n_concepts": 30
+        },
+        "43": {
+          "baseline": {
+            "accuracy": 0.5254237288135594,
+            "f1": 0.5236363636363636,
+            "sensitivity": 0.53439605924811,
+            "specificity": 0.767009172181586
+          },
+          "full_intervention_accuracy": 0.4661016949152542,
+          "gain": -0.05932203389830515,
+          "n_concepts": 30
+        },
+        "44": {
+          "baseline": {
+            "accuracy": 0.5338983050847458,
+            "f1": 0.5425282442629246,
+            "sensitivity": 0.5487120719734546,
+            "specificity": 0.7691612346784761
+          },
+          "full_intervention_accuracy": 0.5169491525423728,
+          "gain": -0.016949152542372947,
+          "n_concepts": 30
+        }
+      },
+      "summary": {
+        "accuracy_mean": 0.5169491525423728,
+        "accuracy_std": 0.0183071771141465,
+        "concept_r2_mean": 0.49459583560625714,
+        "concept_r2_std": 0.008414082927773927,
+        "intervention_baseline_accuracy_mean": 0.5169491525423728,
+        "intervention_baseline_accuracy_std": 0.0183071771141465,
+        "intervention_full_accuracy_mean": 0.46892655367231634,
+        "intervention_full_accuracy_std": 0.03810942814472327,
+        "intervention_gain_mean": -0.048022598870056554,
+        "intervention_gain_std": 0.022242960096078554
+      }
+    },
+    "lambda20": {
+      "training_per_seed": {
+        "42": {
+          "accuracy": 0.4745762711864407,
+          "f1": 0.4763923422757878,
+          "sensitivity": 0.4935689118462012,
+          "specificity": 0.7406412233998441,
+          "concept_r2": {
+            "frontal_delta": 0.5165756940841675,
+            "frontal_theta": 0.7139390707015991,
+            "frontal_alpha": 0.8869762420654297,
+            "frontal_beta": 0.6436638832092285,
+            "temporal_delta": 0.6705836653709412,
+            "temporal_theta": 0.8562419414520264,
+            "temporal_alpha": 0.8888986110687256,
+            "temporal_beta": 0.7825069427490234,
+            "central_delta": 0.5434024333953857,
+            "central_theta": 0.8675930500030518,
+            "central_alpha": 0.9263603687286377,
+            "central_beta": 0.7746511101722717,
+            "parietal_delta": 0.6249518990516663,
+            "parietal_theta": 0.8912785649299622,
+            "parietal_alpha": 0.8960081338882446,
+            "parietal_beta": 0.8752387166023254,
+            "occipital_delta": 0.5620425343513489,
+            "occipital_theta": 0.8219940662384033,
+            "occipital_alpha": 0.8769961595535278,
+            "occipital_beta": 0.8493765592575073,
+            "frontal_alpha_asym": -0.0023523569107055664,
+            "temporal_alpha_asym": 0.029586315155029297,
+            "posterior_alpha_asym": 0.10852599143981934,
+            "theta_alpha_ratio": 0.7886652946472168,
+            "dtabr": 0.6717852354049683,
+            "alpha_peak_freq": 0.4303779602050781,
+            "alpha_peak_amplitude": 0.7798604965209961,
+            "frontal_alpha_plv": 0.6675801277160645,
+            "temporal_alpha_plv": 0.055494606494903564,
+            "posterior_alpha_plv": 0.2126043438911438
+          }
+        },
+        "43": {
+          "accuracy": 0.5169491525423728,
+          "f1": 0.4873690473710947,
+          "sensitivity": 0.5262374713508705,
+          "specificity": 0.7580774908361114,
+          "concept_r2": {
+            "frontal_delta": 0.5112172961235046,
+            "frontal_theta": 0.7380000948905945,
+            "frontal_alpha": 0.887691080570221,
+            "frontal_beta": 0.6656681299209595,
+            "temporal_delta": 0.6533204913139343,
+            "temporal_theta": 0.864285945892334,
+            "temporal_alpha": 0.8761403560638428,
+            "temporal_beta": 0.7739080190658569,
+            "central_delta": 0.5372118949890137,
+            "central_theta": 0.8569501638412476,
+            "central_alpha": 0.9086958169937134,
+            "central_beta": 0.7852639555931091,
+            "parietal_delta": 0.6257246136665344,
+            "parietal_theta": 0.8901128768920898,
+            "parietal_alpha": 0.8883253931999207,
+            "parietal_beta": 0.874375581741333,
+            "occipital_delta": 0.5228718519210815,
+            "occipital_theta": 0.8373921513557434,
+            "occipital_alpha": 0.8732351064682007,
+            "occipital_beta": 0.86094069480896,
+            "frontal_alpha_asym": -0.020528078079223633,
+            "temporal_alpha_asym": 0.00969165563583374,
+            "posterior_alpha_asym": 0.11707597970962524,
+            "theta_alpha_ratio": 0.7734102606773376,
+            "dtabr": 0.7132772207260132,
+            "alpha_peak_freq": 0.469016969203949,
+            "alpha_peak_amplitude": 0.7619404792785645,
+            "frontal_alpha_plv": 0.6519840359687805,
+            "temporal_alpha_plv": 0.04076564311981201,
+            "posterior_alpha_plv": 0.19852948188781738
+          }
+        },
+        "44": {
+          "accuracy": 0.5254237288135594,
+          "f1": 0.5303469837022587,
+          "sensitivity": 0.5362204814194004,
+          "specificity": 0.7642309797482211,
+          "concept_r2": {
+            "frontal_delta": 0.49007803201675415,
+            "frontal_theta": 0.7380714416503906,
+            "frontal_alpha": 0.8949418663978577,
+            "frontal_beta": 0.6218591332435608,
+            "temporal_delta": 0.6479768753051758,
+            "temporal_theta": 0.8435158133506775,
+            "temporal_alpha": 0.8963348865509033,
+            "temporal_beta": 0.7765600681304932,
+            "central_delta": 0.5547463297843933,
+            "central_theta": 0.8467470407485962,
+            "central_alpha": 0.9236083030700684,
+            "central_beta": 0.779010534286499,
+            "parietal_delta": 0.6207047700881958,
+            "parietal_theta": 0.8721035122871399,
+            "parietal_alpha": 0.8964004516601562,
+            "parietal_beta": 0.881833553314209,
+            "occipital_delta": 0.5243984460830688,
+            "occipital_theta": 0.8109709024429321,
+            "occipital_alpha": 0.8929935693740845,
+            "occipital_beta": 0.8608953952789307,
+            "frontal_alpha_asym": -0.007290005683898926,
+            "temporal_alpha_asym": 0.004700124263763428,
+            "posterior_alpha_asym": 0.13125991821289062,
+            "theta_alpha_ratio": 0.757159411907196,
+            "dtabr": 0.7058730721473694,
+            "alpha_peak_freq": 0.43178677558898926,
+            "alpha_peak_amplitude": 0.7997949123382568,
+            "frontal_alpha_plv": 0.6947059631347656,
+            "temporal_alpha_plv": 0.027521610260009766,
+            "posterior_alpha_plv": 0.2000877857208252
+          }
+        }
+      },
+      "intervention_per_seed": {
+        "42": {
+          "baseline": {
+            "accuracy": 0.4745762711864407,
+            "f1": 0.4763923422757878,
+            "sensitivity": 0.4935689118462012,
+            "specificity": 0.7406412233998441
+          },
+          "full_intervention_accuracy": 0.4576271186440678,
+          "gain": -0.01694915254237289,
+          "n_concepts": 30
+        },
+        "43": {
+          "baseline": {
+            "accuracy": 0.5169491525423728,
+            "f1": 0.4873690473710947,
+            "sensitivity": 0.5262374713508705,
+            "specificity": 0.7580774908361114
+          },
+          "full_intervention_accuracy": 0.4661016949152542,
+          "gain": -0.05084745762711862,
+          "n_concepts": 30
+        },
+        "44": {
+          "baseline": {
+            "accuracy": 0.5254237288135594,
+            "f1": 0.5303469837022587,
+            "sensitivity": 0.5362204814194004,
+            "specificity": 0.7642309797482211
+          },
+          "full_intervention_accuracy": 0.4830508474576271,
+          "gain": -0.04237288135593226,
+          "n_concepts": 30
+        }
+      },
+      "summary": {
+        "accuracy_mean": 0.5056497175141242,
+        "accuracy_std": 0.02224296009607856,
+        "concept_r2_mean": 0.6386361479759216,
+        "concept_r2_std": 0.0012874027735701224,
+        "intervention_baseline_accuracy_mean": 0.5056497175141242,
+        "intervention_baseline_accuracy_std": 0.02224296009607856,
+        "intervention_full_accuracy_mean": 0.4689265536723164,
+        "intervention_full_accuracy_std": 0.010569653634954634,
+        "intervention_gain_mean": -0.036723163841807925,
+        "intervention_gain_std": 0.01440400992540334
+      }
+    }
+  }
+}

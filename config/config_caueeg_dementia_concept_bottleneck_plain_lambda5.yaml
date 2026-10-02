@@ -1,0 +1,33 @@
+data:
+  root_dir: "/Users/mohamed/Downloads/dataset-working"
+  cache_dir: "./data_cache/caueeg_e2e_cache"
+  concept_cache_dir: "./data_cache/caueeg_concepts_cache"
+  task: "dementia"
+  sfreq: 100
+  bandpass: [0.5, 45]
+  n_channels: 19
+  skip_sec: 0
+  window_sec: 60
+  max_windows_per_subject: 5
+  clip_uv: 800.0
+  divisor: 10.8
+  eval_tta: true
+
+model:
+  n_classes: 3
+  n_filters: 40
+  dropout: 0.5
+  residual: false   # pure bottleneck, see config_caueeg_dementia_concept_bottleneck_plain.yaml
+  checkpoint_name: "caueeg_dementia_concept_bottleneck_plain_lambda5"   # -> saved_models/caueeg_dementia_concept_bottleneck_plain_lambda5_best_model.pt
+                                                                           # distinct from the lambda=0.5 plain checkpoint -- never overwrites it
+
+training:
+  epochs: 20
+  lr: 0.001
+  weight_decay: 0.001
+  lambda_concept: 5   # lambda sweep point, see config_tuh_concept_bottleneck_plain_lambda5.yaml
+  class_weight_power: 1.5
+  batch_size: 32
+  early_stop_patience: null
+  val_ema_decay: 0.9
+  seed: 42
