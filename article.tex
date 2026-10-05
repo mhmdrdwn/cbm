@@ -1,109 +1,119 @@
-\documentclass{iopjournal}
-\usepackage{amsmath}
-\usepackage{subcaption}
+\documentclass[journal,twoside,web]{ieeecolor}
+\usepackage{generic}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{algorithm,algorithmic}
+\usepackage{hyperref}
+\usepackage[caption=false]{subcaption}
+\hypersetup{hidelinks=true}
+\usepackage{textcomp}
+
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\markboth{\hskip25pc IEEE JOURNAL OF BIOMEDICAL AND HEALTH INFORMATICS}
+{Radwan \MakeLowercase{\textit{et al.}}: EEG Pathology Detection via Clinical Concept
+       Bottleneck Models}
 \begin{document}
-
-\articletype{Paper}
-
 \title{EEG Pathology Detection via Clinical Concept
-       Bottleneck Neural Networks}
+       Bottleneck Models}
+\author{Mohamed Radwan, Pedro G. Lind, and Anis Yazidi
+\thanks{\textit{(Corresponding author: Anis Yazidi.)}}
+\thanks{Mohamed Radwan is with the Department of Computer Science, Oslo
+Metropolitan University, 0167 Oslo, Norway.}
+\thanks{Pedro G. Lind is with the Department of Computer Science, Oslo
+Metropolitan University, 0167 Oslo, Norway, and also with the Department of
+Technology, Kristiania University of Applied Sciences, 0107 Oslo, Norway.}
+\thanks{Anis Yazidi is with the Department of Computer Science, Oslo
+Metropolitan University, 0167 Oslo, Norway, also with the Numerical Analysis
+and Scientific Computing Department, Simula Research Laboratory, 0164 Oslo,
+Norway, and also with the Department of Informatics, University of Oslo,
+0373 Oslo, Norway (e-mail: anisy@ifi.uio.no).}}
 
-% This is commented out for the double blind reviews anonymity 
-\author{Mohamed Radwan$^{1}$\orcid{0009-0004-9617-6365},
-        Pedro G. Lind$^{1, 2}$\orcid{0000-0002-8176-666X}
-        and Anis Yazidi$^{1,3,4,*}$\orcid{0000-0001-7591-1659}}
-
-\affil{$^1$Oslo Metropolitan University, Department of Computer Science, 0167 Oslo,Norway}
- \\
-\affil{$^2$Department of Technology, Kristiania University of Applied Sciences, 0107 Oslo, Norway}
- \\
-\affil{$^3$Simula Research Laboratory, Numerical Analysis and Scientific Computing, 0164 Oslo, Norway}
- \\
-\affil{$^4$University of Oslo, Department of Informatics, 0373 Oslo, Norway}
- \\
-\affil{$^*$Author to whom any correspondence should be addressed.}
-
-\email{anisy@ifi.uio.no}
-
-\keywords{EEG, concept bottleneck models,
-          interpretable deep learning, EEG pathology detection}
+\maketitle
 
 \begin{abstract}
-\textit{Objective.} Deep learning models for electroencephalography (EEG) pathology detection achieve competitive accuracy but offer little clinical transparency or interpretability. The limited transparency limits their deployment in settings where predictions should be auditable and correctable by clinicians. We introduce Concept Bottleneck Neural Networks for EEG pathology detection, routing model predictions through a layer of analytically defined clinical EEG biomarkers.
-\textit{Approach.} The EEG concepts proposed in this study are regional band spectral power, hemispheric asymmetry, spectral ratio, spectral peak frequency and amplitude, and interhemispheric alpha-band phase-locking connectivity. Those concepts are extracted from EEG literature. A shallow Convolutional Neural Network (CNN) backbone is evaluated on two benchmark datasets in three configurations: a black-box baseline with no concept layer, a \textit{hybrid} concept bottleneck (CB-CNN) whose classifier sees the predicted concepts concatenated with a residual projection of the raw backbone features, and a \textit{pure} concept bottleneck (CB-CNN-Plain) whose classifier sees only the predicted concepts, with no residual pathway. Model stability is assessed across three seeds, statistical significance of pairwise accuracy differences via McNemar's test, concept prediction quality via $R^2$ against the computed concept values, concept intervention, and information leakage through the residual pathway via linear probing.
-\textit{Main results.} Accuracy is within a narrow band across all three model configurations on both datasets (TUAB: $82.7$--$83.6\%$ mean; CAUEEG-Dementia: $57.9$--$62.7\%$ mean), and McNemar's test finds none of the pairwise comparisons among the three models statistically significant on either dataset. This indicates that routing predictions through clinical concepts -- with or without a residual pathway -- carries no statistically significant evidence of an accuracy difference from the black-box baseline. However, the pure bottleneck's concept predictions are substantially less faithful to their analytical definitions than the hybrid's (mean concept $R^2$: $-0.219$ vs $0.310$ on TUAB; $0.028$ vs $0.327$ on CAUEEG-Dementia). Two further analyses show the hybrid's accuracy does not really depend on those concepts: a leakage analysis shows its residual pathway alone reaches $81.9\%$ accuracy on TUAB -- only marginally below the model's own $82.9\%$ -- and on CAUEEG-Dementia the residual pathway alone ($63.6\%$) actually \textit{exceeds} the concept-only probe ($57.6\%$); and a full-concept intervention experiment, replacing every predicted concept with its ground-truth value simultaneously, changes the hybrid's accuracy by less than one point of seed-to-seed noise on either dataset, while the same intervention \textit{collapses} the pure bottleneck's accuracy by $26$ points on TUAB and $22$ points on CAUEEG -- confirming the pure bottleneck, unlike the hybrid, genuinely depends on its own concept predictions.
-\textit{Significance.} Concept bottlenecks, hybrid or pure, can be added to EEG pathology detection models with no statistically significant evidence of an accuracy cost while providing concept-level explanations. However, the hybrid design's residual pathway substantially undermines the faithfulness of those explanations, since most of its decisions can be attributed to signal outside the concept layer -- a pure bottleneck removes this specific failure mode by construction, at the cost of measurably less accurate concept predictions. The source code for the experiments is available at: \href{https://github.com/mhmdrdwn/cbm}{https://github.com/mhmdrdwn/cbm}.
+Deep learning models for electroencephalography (EEG) pathology detection achieve competitive accuracy but offer limited clinical interpretability. We introduce concept bottleneck models (CBMs) for EEG pathology detection, which
+use clinical EEG biomarkers computed analytically from the signal as a learning bottleneck to be used for prediction. Those concepts include band power, spectral ratios, alpha peak frequency and amplitude, hemispheric asymmetry, and phase locking values. Using a shallow convolutional neural network (CNN) backbone, we compare a black-box baseline with a hybrid CBM and the classifier receives a residual projection of the backbone features. The other variant is a pure CBM where the classifier receives only the predicted concepts. Models are evaluated on abnormality detection (TUAB) and dementia classification (CAUEEG)
+across three seeds followed by concept prediction quality, concept intervention and leakage analysis. Both CBMs approach the baseline on TUAB ($82.7$--$82.9\%$ vs $83.6\%$) and are $2$--$5$ percentage points lower on CAUEEG ($57.9$--$60.5\%$ vs $62.7\%$). The pure CBM exhibits concept leakage where the predicted concepts deviate from their ground truth analytical values, and replacing them with their true values reduces accuracy by $26$ and
+$22$ points on TUAB and CAUEEG. The leakage is mitigated by increasing the weight of the concept loss which helps to reduce this intervention gap to
+$7$ and $4$ percentage points and raising mean concept $R^2$ to $0.53$ and $0.64$ with small accuracy cost on TUAB but a substantial cost on CAUEEG. The code of the experiments and full logs  are available at
+\href{https://www.github.com/mhmdrdwn/cbm}{https://www.github.com/mhmdrdwn/cbm}.
 \end{abstract}
 
-% ─────────────────────────────────────────────────────────────────────────────
-\section{Introduction and Background}
-% ─────────────────────────────────────────────────────────────────────────────
+\begin{IEEEkeywords}
+Electroencephalography, Deep Learning, Concept Bottleneck Models,
+\end{IEEEkeywords}
 
+\section{Introduction}
+\label{sec:introduction}
 
-Electroencephalography (EEG) provides a non-invasive and cost effective tool used in clinical screening settings for neurodegenerative diseases. Machine Learning has advanced substantially in the analysis of EEG data with convolutional neural networks (CNNs) and graph neural networks (GNNs) achieving competitive performances on large clinical corpora, as demonstrated by the representative studies
-\cite{schirrmeister2017deep, lawhern2016eegnet, demir2021eeg, song2018eeg, klepl2024, roy2019chrononet}. 
+Electroencephalography (EEG) provides a non invasive and cost effective tool used in clinical screening settings for neurodegenerative diseases. Machine Learning has advanced substantially in the analysis of EEG data with various neural networks architectures. Those networks such as Convolutional neural networks (CNNs) and graph neural networks (GNNs) achieving competitive performances on large clinical corpora, as demonstrated by the representative studies
+\cite{schirrmeister2017}, \cite{lawhern2016eegnet}, \cite{demir2021eeg},\cite{song2018eeg},\cite{klepl2024}, \cite{roy2019chrononet}.
 
-Despite the accuracy gains, interpretability of those models remains limited. The interpretation has to be clinically viable which remains a challenge in screening applications. In clinical settings, control is essential for safety and regulatory compliance.
+Despite the accuracy gains, interpretability of those models remains limited. This interpretation has to be clinically viable which remains a challenge in clinical applications. In this settings, control is essential for safety and regulatory compliance.
 
-Current EEG interpretability methods are mainly Post-hoc attribution methods such as saliency maps \cite{simonyan2013}, GradCAM \cite{selvaraju2017} and SHAPley values based on \cite{lundberg2017}. Those methods explain decisions of the models after they are made but cannot be verified or corrected at inference time. Using this approach, input features are highlighted using attention weights or learned saliencies \cite{demir2022, zhao2024}. Other studies are breaking EEG signals into frequency band features and using them in building and interpreting GNNs \cite{tawhid2024exploring, radwan2025frequency, klepl2024graph, abadal2025graph}
+Current EEG interpretability methods are mainly Post-hoc attribution methods such as saliency maps \cite{simonyan2013}, GradCAM \cite{selvaraju2017} and SHAPley values \cite{lundberg2017}. Those methods explain decisions of the models after the predictions are made but cannot be verified or corrected at inference time. Using this approach, input features are highlighted using attention weights or learned saliencies \cite{demir2022, zhao2024}. Other studies are breaking EEG signals into frequency band features and using them in building and interpreting GNNs \cite{tawhid2024exploring}, \cite{radwan2025frequency}, \cite{klepl2024graph}, \cite{abadal2025graph}.
 
-Concept Bottleneck Models (CBMs) \cite{koh2020} offer a new direction. The internal encoding layers of the model are constrained with a set of predefined human interpretable concepts and the final classifier operates on these concepts. Clinicians can inspect and verify those concepts and intervene in it by correcting a concept at inference without retraining. CBMs have not been applied specifically in the domain of EEG data, to the best of our knowledge. CBMs train models to predict human interpretable concepts as intermediate representations and classify from those concepts. However, these methods are challenging. One of those challenges is the information leakage \cite{havasi2022}. This happens when the concept layer encodes task-relevant information that bypasses the concept definitions \cite{mahinpei2021}.
+Concept Bottleneck Models (CBMs) \cite{koh2020} offer a new direction for explaining Deep Learning models. The internal encoding layers of the model are constrained by a set of predefined human interpretable concepts and the final classifier operates on these concepts. In this setting, clinicians can inspect and verify those concepts and intervene in it by correcting a concept at inference without retraining. CBMs train models to predict human interpretable concepts as intermediate representations and use them for predictions. However, these methods are challenging and one of those challenges is the information leakage \cite{havasi2022}. This happens when the concept layer encodes task-relevant information that bypasses the concept definitions \cite{mahinpei2021}. CBMs have not been applied specifically in the domain of EEG data, to the best of our knowledge. In this article, we explore the use of CBMs in the EEG domain. 
 
-The EEG domain is particularly well suited for the CBMs method. Clinical EEG concepts such as delta band power, theta/alpha ratio (TAR), and alpha peak frequency are precisely defined analytical quantities. This means that those concepts are computable directly from raw signals using defined neurophysiological formulas. This is important because it provides computed concept labels for every EEG record without any manual annotation which can be an advantage over other applications that require manual concept annotation. 
+The EEG domain is particularly well suited for the CBMs method. Clinical EEG concepts such as delta band power, theta/alpha ratio, and alpha peak frequency are precisely defined analytical quantities. This means that those concepts are computable directly from raw signals using well defined neurophysiological formulas. This means it provides computed concept labels for every EEG record without any manual annotation which can be an advantage over other applications that require manual concept annotation. 
 
-In this article, we introduce CB-CNN, a hybrid CBM, and CB-CNN-Plain, a pure CBM, for EEG pathology detection and make the following contributions:
+In this article, we introduce different variants of CBMs for EEG pathology detection and make the following contributions:
+
 
 \begin{enumerate}
 
-\item We introduce the first application of Concept Bottleneck Models (CBMs) to EEG pathology detection through clinical EEG biomarkers validated empirically before inclusion in training. The pipeline is evaluated on two clinically separate tasks; Abnormality and dementia EEG datasets.
+\item We introduce the first application of Concept Bottleneck Models (CBMs) to EEG pathology detection using clinical EEG concepts that are computed analytically from the signal. The approach is evaluated on two clinically distinct tasks which are abnormality detection (TUAB dataset) and dementia classification (CAUEEG dataset).
 
-\item Across three seeds, we show that routing predictions through clinical concepts carries no statistically significant evidence of an accuracy difference relative to the CNN baseline. We used McNemar's test to highlight the statistical significance of comparisons between the baseline and both concept bottleneck models. This adds advantage in using CBMs in the domain because it is unlike the accuracy degradation typically reported in CBMs literature.
+\item We show that accuracy alone does not reveal whether concept explanations are faithful. We examined leakage analysis for the used models where predicted concepts deviate from their analytical values and use hidden label information to make predictions. 
 
-\item We demonstrate that the presence of a residual pathway fundamentally influences concept bottleneck behaviour. A hybrid design (residual pathway alongside the concepts) achieves higher concept prediction fidelity but lets a substantial share of the classifier's decision bypass the concepts entirely; removing the residual pathway (a pure bottleneck) closes that leakage by construction but measurably degrades concept prediction quality, revealing a trade-off between concept faithfulness and concept accuracy rather than one between predictive performance and interpretability.
+\item We show that increasing the weight of the concept loss weight substantially reduces concept leakage. Furthermore, we report the accuracy cost of this mitigation method as it exposes a trade-off between concept faithfulness and classification accuracy.
 
 \end{enumerate}
 
 
-\section{Data and Methods}
 
-
-
-\subsection{Datasets}
+\section{Data}
 \label{sec:dataset}
-Two datasets are used in this study; TUAB dataset is used for the task of abnormality detection while the CAUEEG is used for dementia detection. 
+Two datasets are used in this study. The first is the TUAB dataset which is used for the task of abnormality detection while the other is the CAUEEG which is used for dementia detection. 
+
 \subsubsection{Temple University Hospital Abnormal EEG Corpus (TUAB)}
 \hfill \break
-The TUAB dataset \cite{obeid2016} has $2,993$ recordings from $2,329$ subjects, split into $2,717$ training and $276$ test data samples. Labels indicate whether a record shows clear evidence of pathology which is interpreted as abnormal. The test set contains $126$ abnormal and $150$ normal recordings. In this dataset, abnormality means that the record shows clinical pathology, brain dysfunction or neurological disorders. The data samples are recorded using the standard $10-20$ montage. This system has $19$ electrodes plus two reference electrodes (A1, A2). The electrodes are Fp1, Fp2, F7, F3, Fz, F4, F8, T3, C3, Cz, C4, T4, T5, P3, Pz, P4, T6, O1, O2, A1, A2. In these experiments, signals are resampled to $100$ Hz and bandpass filtered between $0.5$ and $45$ Hz using a fourth order Butterworth filter. Clinical concept computation (section~\ref{sec:concepts}) uses only the $19$ electrodes in which we exclude the reference electrodes A1, A2. 
+The TUAB dataset \cite{obeid2016} has $2,993$ recordings from $2,329$ subjects, split into $2,717$ training and $276$ test data samples. The test set contains $126$ abnormal and $150$ normal recordings. Labels indicate whether a record shows clear evidence of pathology which is interpreted as abnormal. Abnormality means clinical pathology, brain dysfunction or neurological disorders. The data samples are recorded using the standard $10-20$ montage. This system has $19$ electrodes plus two reference electrodes (A1, A2). The electrodes are Fp1, Fp2, F7, F3, Fz, F4, F8, T3, C3, Cz, C4, T4, T5, P3, Pz, P4, T6, O1, O2, A1, A2. In these experiments, signals are resampled to $100$ Hz and bandpass filtered between $0.5$ and $45$ Hz using Butterworth filter. Clinical concept computation (section~\ref{sec:concepts}) uses only the $19$ electrodes in which we exclude the reference electrodes A1, A2. 
 
 
 \subsubsection{Chung-Ang University Hospital EEG (CAUEEG)}
 \hfill \break
-CAUEEG dataset \cite{kim2023caueeg} was collected at Chung-Ang University Hospital in South Korea. It contains $1,379$ EEG recordings from $1,155$ unique subjects categorized into four clinical groups: $459$ healthy controls (NC), $417$ with mild cognitive impairment (MCI), $311$ with dementia, and $192$ with other neurological conditions. The diagnoses of Dementia in the data samples follow protocols from the National Institute of Neurological and Communicative Disorders and Stroke and Alzheimer’s Disease and Related Disorders Association and the Diagnostic and Statistical Manual of Mental Disorders. MCI subjects meet criteria including subjective memory complaints, intact daily functioning and cognitive deficits. Similar to TUAB, the samples used the $10-20$ system at $200$ Hz and pre-filtered with a $0.5$:$70$ Hz bandpass filter. In these experiments, we evaluate on the CAUEEG-Dementia task which is a three-class classification of NC, MCI, and dementia. This task is more clinically demanding according to the original authors \cite{kim2023caueeg}. Similar to original authors \cite{kim2023caueeg}, our experimental split uses $950$ subjects for training, $119$ for validation, and $118$ for testing. The signals are resampled to $100$ Hz and bandpass filtered between $0.5$ and $45$ Hz.
+CAUEEG dataset \cite{kim2023caueeg} was collected at Chung-Ang University Hospital in South Korea. It contains $1,379$ EEG recordings from $1,155$ unique subjects. The subjects are categorized into four clinical groups: $459$ healthy controls (NC), $417$ with mild cognitive impairment (MCI), $311$ with dementia, and $192$ with other neurological conditions. The diagnoses of Dementia in the data samples follow protocols from the National Institute of Neurological and Communicative Disorders and Stroke and Alzheimer’s Disease and Related Disorders Association and the Diagnostic and Statistical Manual of Mental Disorders. Similar to TUAB, the samples used the $10-20$ system at $200$ Hz and filtered with a $0.5$:$70$ Hz bandpass filter. In these experiments, we evaluate on the CAUEEG-Dementia task which is a three-class classification of NC, MCI, and dementia. This task is more clinically demanding according to the original authors \cite{kim2023caueeg}. Similar to original authors \cite{kim2023caueeg}, our experimental split uses $950$ samples for training, $119$ for validation, and $118$ for testing. The signals are resampled to $100$ Hz and bandpass filtered between $0.5$ and $45$ Hz.
 
 
+\section{Methods}
 \subsection{Clinical EEG Concepts}
 \label{sec:concepts}
 
-We define $30$ candidate clinical concepts that are computed analytically from raw EEG signals using established neurophysiological formulas. Those concepts are deterministically computed from every EEG record without the need for manual annotation. All concepts are normalized to $[0, 1]$ using the training set. The computed concepts are $20$ band power, three hemispheric asymmetry, two power spectral ratio, two based on peak amplitude and frequency, and three interhemispheric functional connectivity. The details of computing those concepts are shown in the following sections.
+In the experiments, we use $30$ candidate clinical concepts that are computed analytically from raw EEG signals using established neurophysiological formulas. Those concepts are deterministically computed from every EEG record without the need for manual annotation. All concepts are normalized using the training set. The computed concepts are $20$ band power, three hemispheric asymmetry, two power spectral ratio, two based on peak amplitude and frequency, and three PLV connectivity. The details of computing those concepts are shown in the following sections.
 
 
 \subsubsection{Regional band power ($20$ Concepts)}
 \hfill \break
-Those $20$ concepts are computed from the signals using the band power of the EEG channels after breaking the signals into frequency bands. Band power or Power Spectrum Density (PSD) is calculated per channel using Welch's method \cite{welch1967} with $512$ as the length of each segment. PSD is the average of the squared magnitudes of Short Time Fourier Transform over overlapping segments. The value is transformed to log scale for numerical stability. Five brain regions are used from the EEG $10$-$20$ montage ($19$ used electrodes). Those electrodes are frontal (Fp1, Fp2, F3, F4, Fz, F7, F8), temporal (T3, T4, T5, T6), central (C3, Cz, C4), parietal (P3, Pz, P4) and occipital (O1, O2). The regional band power concept is the mean of PSD across all electrodes in that region. Four frequency bands are used: delta ($0.5$:$4$ Hz), theta ($4$:$8$Hz), alpha ($8$:$13$Hz), and beta ($13$:$30$Hz). This yields $20$ concepts from the five regions and four frequency bands.  
-
-The concepts such as frontal delta and theta have been studied for their clinical relevance \cite{niedermeyer2011}, \cite{lin2021differences}, \cite{nardone2018usefulness}, \cite{tomasello2023neuropsychological}. Reduced occipital alpha was studied as a general marker of cortical dysfunction \cite{klimesch1999}. Lower alpha band activity was found in dementia patients compared to controls in the orbital frontal and temporal lobes \cite{nishida2011differences}. 
+Those $20$ concepts are computed from the signals using the band power of the EEG channels after breaking the signals into frequency bands. Band power or Power Spectrum Density (PSD) is calculated per channel using Welch's method \cite{welch1967} with $512$ as the length of each segment. PSD is the average of the squared magnitudes of Short Time Fourier Transform over overlapping segments. The value is transformed to log scale for numerical stability. Five brain regions are used from the EEG $10$-$20$ montage ($19$ used electrodes). Those electrodes are frontal (Fp1, Fp2, F3, F4, Fz, F7, F8), temporal (T3, T4, T5, T6), central (C3, Cz, C4), parietal (P3, Pz, P4) and occipital (O1, O2). The regional band power concept is the mean of PSD across all electrodes in that region. Four frequency bands are used: delta ($0.5$:$4$ Hz), theta ($4$:$8$Hz), alpha ($8$:$13$Hz), and beta ($13$:$30$Hz). This yields $20$ concepts from the five regions and four frequency bands. The concepts such as delta and theta bandpower have been studied for their clinical relevance \cite{niedermeyer2011}, \cite{lin2021differences}, \cite{nardone2018usefulness}, \cite{tomasello2023neuropsychological}. Reduced occipital alpha was studied as a general marker of cortical dysfunction \cite{klimesch1999}. Lower alpha band activity was found in dementia patients compared to controls in the orbital frontal and temporal lobes \cite{nishida2011differences}. 
 
 
 \subsubsection{Hemispheric asymmetry indices (3 concepts)}
 \hfill \break
-Asymmetry index quantifies the relative difference in alpha power ($P^{\alpha}$) between the right and left hemispheres for a given region:
+Asymmetry index quantifies the relative difference in alpha power ($P^{\alpha}$) between the right and left hemispheres for a given region.
+
 \begin{equation}
   \text{Asymmetry} =
   \frac{P_\text{right}^{\alpha} - P_\text{left}^{\alpha}}
        {P_\text{right}^{\alpha} + P_\text{left}^{\alpha}}
   \label{eq:asymmetry}
 \end{equation}
-Given equation \ref{eq:asymmetry}, values range from $-1$ (left dominance) to $+1$ (right dominance) and zero indicates hemispheric symmetry. Three electrode pairs define the three asymmetry concepts: frontal (F4 vs F3), temporal (T4 vs T3), and posterior (O2 vs O1). Those values are rescaled to $[0, 1]$ before being used as concepts. The study \cite{mizrak2024investigation} reports the difference of hemispheric asymmetry between Alzheimer and control groups. Additionally, Frontal alpha asymmetry is also an established marker studied in depression \cite{davidson2004}, \cite{peng2026altered}, \cite{jia2026hemispheric}.
+
+Given equation \ref{eq:asymmetry}, values range from $-1$ (left dominance) to $+1$ (right dominance) and zero indicates hemispheric symmetry. Three electrodes pairs define the three asymmetry concepts which are frontal (F4 vs F3), temporal (T4 vs T3), and posterior (O2 vs O1). The study \cite{mizrak2024investigation} reports the difference of hemispheric asymmetry between Alzheimer and control groups. Additionally, Frontal alpha asymmetry is also an established marker studied in depression \cite{davidson2004}, \cite{peng2026altered}, \cite{jia2026hemispheric}.
 
 
 \subsubsection{Spectral ratio markers (2 concepts)}
@@ -116,10 +126,10 @@ Spectral ratios quantify the balance between slow and fast waves powers. This is
   \frac{\bar{P}^{\theta}}{\bar{P}^{\alpha}}
   \label{eq:tar}
 \end{equation}
-where $\bar{P}^{\theta}$ and $\bar{P}^{\alpha}$ are the global
-mean theta and alpha powers across all $19$ electrodes. Higher TAR indicates increased cognitive load and mental fatigue and is highlighted in Alzheimer compared to Control group \cite{wascher2014frontal}, \cite{borghini2014measuring}, \cite{olugun2024quantitative}.
 
-A Delta/Alpha Ratio (DAR, $\bar{P}^{\delta}/\bar{P}^{\alpha}$) concept was in an earlier version of this concept set but was dropped: a data-quality audit found it correlated $r=0.97$--$0.98$ with DTABR below (both datasets), and both share the same tanh-saturation failure mode (section~\ref{sec:concept_quality}) -- DTABR is the more complete "slow-vs-fast" index and subsumes DAR's delta/alpha comparison as a special case, so keeping both bought no independent signal.
+where $\bar{P}^{\theta}$ and $\bar{P}^{\alpha}$ are the global mean theta and alpha powers across all $19$ electrodes. Higher TAR indicates increased cognitive load and mental fatigue and is highlighted in Alzheimer groups \cite{wascher2014frontal}, \cite{borghini2014measuring}, \cite{olugun2024quantitative}.
+
+DTABR is also another slow-vs-fast index given as the following:
 
 \textbf{Delta+Theta over Alpha+Beta Ratio (DTABR):}
 \begin{equation}
@@ -128,73 +138,82 @@ A Delta/Alpha Ratio (DAR, $\bar{P}^{\delta}/\bar{P}^{\alpha}$) concept was in an
        {\bar{P}^{\alpha} + \bar{P}^{\beta}}
   \label{eq:dtabr}
 \end{equation}
-DTABR index measures the balance between the power of slow and fast wave used in the studies including \cite{olivia2024qeeg}, \cite{hussain2022quantitative}. 
+
+DTABR index measures the balance between the power of slow and fast wave and is used in the studies including \cite{olivia2024qeeg}, \cite{hussain2022quantitative}. 
 
 
 \subsubsection{Spectral structure concepts (2 concepts)}
 \hfill \break
-\textbf{Alpha peak frequency (APF):}
-This is defined as the dominant oscillation frequency within the alpha band. This is computed as the frequency of maximum power spectral density in the alpha band range for the occipital region. APF is normalized to $[0, 1]$. The occipital dominant rhythm is reduced in dementia and MCI. \cite{klimesch1999}, \cite{radwan2025frequency}, \cite{tawhid2024exploring}.
+Two concepts are used in this family. The first is Alpha peak frequency (APF) which is the dominant oscillation frequency within the alpha band. It is computed as the frequency of maximum power spectral density in the alpha band range for the occipital region. Some studies examined the occipital dominant rhythm is reduced in dementia and MCI \cite{klimesch1999}, \cite{radwan2025frequency}, \cite{tawhid2024exploring}.
 
 
-\textbf{Alpha peak amplitude (APA):}
-The maximum PSD value within the alpha range over occipital electrodes. As APF tells what frequency is the dominant alpha rhythm at, APA tells how strong it is. This value is log transformed for stability. A strong occipital alpha peak indicates an intact dominant rhythm where the absence indicates abnormality \cite{labonte2023posterior}, \cite{olejarczyk2017eeg}.
+The other concept is the Alpha peak amplitude (APA) which is the maximum PSD value within the alpha range over occipital electrodes. As APF tells what frequency is the dominant alpha rhythm at, APA tells how strong it is. This value is log transformed for stability. A strong occipital alpha peak indicates an intact dominant rhythm where the absence indicates abnormality \cite{labonte2023posterior}, \cite{olejarczyk2017eeg}.
 
 
 \subsubsection{Phase Locking Value (3 concepts):}
 \hfill \break
-While the asymmetry indices (equation~\ref{eq:asymmetry}) quantify which hemisphere has more alpha \textit{power}, they say nothing about whether the two hemispheres oscillate \textit{in phase}. We compute the phase-locking value between the same three electrode pairs used for the asymmetry concepts (frontal, temporal, posterior):
+
+Phase Locking Value (PLV) is widely used for measuring the functional connectivity between brain regions. The asymmetry indices expressed earlier in equation~\ref{eq:asymmetry} quantify which hemisphere has more alpha power. The focus here is tell whether the two hemispheres oscillate in phase. We compute the PLV between the same three electrode pairs used for the asymmetry concepts (frontal, temporal, posterior).
+
 \begin{equation}
   \mathrm{PLV} = \left| \frac{1}{T}\sum_{t=1}^{T} e^{i(\phi_\text{right}(t) - \phi_\text{left}(t))} \right|
   \label{eq:plv}
 \end{equation}
-where $\phi_\text{right}(t)$ and $\phi_\text{left}(t)$ are the instantaneous phases of the alpha-band ($8$--$13$Hz)-filtered signal at the right and left electrode of the pair, obtained via the analytic signal (Hilbert transform). PLV ranges from $0$ (no consistent phase relationship) to $1$ (perfectly phase-locked) and is already bounded, so it is used as a concept without further normalization. Reduced interhemispheric alpha-band synchrony is a separately established EEG marker of dementia and Alzheimer's disease, distinct from a power-asymmetry deficit \cite{shan2022}.
+
+where $\phi_\text{right}(t)$ and $\phi_\text{left}(t)$ are the instantaneous phases (obtained via Hilbert transform) of the alpha filtered signals at the right and left electrode of the pair. PLV ranges from $0$ which means no phase relationship to $1$ which means phase locked.
 
 
 \subsection{Model Architecture}
 \label{sec:architecture}
 
-We used a single shallow CNN backbone shared by all model variants; Figure \ref{fig:architecture1} illustrates the full model architecture.
+We used a single shallow CNN backbone shared by all model variants in this study following \cite{schirrmeister2017}. 
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.95\textwidth, trim=0cm 0cm 0cm 0cm, clip]{cb_cnn_final.png}
-  \caption{CB-CNN architecture. CB-CNN-Plain shares the same backbone and concept predictor but omits the residual pathway of equation (\ref{eq:classifier}), so the classifier's only input is the predicted concept vector.}
+  \includegraphics[width=0.48\textwidth, trim=0cm 0cm 0cm 0cm, clip]{cbm_pure.pdf}
+  \caption{CB-CNN Pure architecture}
   \label{fig:architecture1}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.48\textwidth, trim=0cm 0cm 0cm 0cm, clip]{cbm_hybrid.pdf}
+  \caption{Hybrid architecture: same backbone and concept predictor as the pure model plus a residual pathway (equation~\ref{eq:classifier}), so the classifier receives both the predicted concepts and the residual projection.}
+  \label{fig:architecture2}
 \end{figure}
 
 
 \subsubsection{Neural network backbone}
 \hfill \break
-Following \cite{schirrmeister2017} shallow CNN architecture, we apply temporal convolution ($40$ filters with kernel size $25$), spatial convolution spanning all $n$ electrodes ($40$ filters, kernel size $n \times 1$), batch normalization, square nonlinearity, average pooling and log transformation.
+The Shallow CNN in this study architecture (after \cite{schirrmeister2017}) applies temporal convolution ($40$ filters with kernel size $25$), spatial convolution spanning all $n$ electrodes ($40$ filters, kernel size $n \times 1$), batch normalization, square, average pooling and log transformation.
 
 \subsubsection{Concept bottleneck}
 \label{sec:concept_bottleneck}
 \hfill \break
-Global average pooling over channel features produces a $d$-dimensional
-embedding $\mathbf{z}$, which a two-layer $\mathrm{MLP}$ (Linear, ReLU,
-Dropout, Linear) maps to $N_c$ predicted concept values between $0$ and $1$:
+
+
+The backbone output is averaged over time produces a $d$-dimensional embedding $\mathbf{z}$ with one value per filter. A two-layer MLP (Linear, ReLU, Dropout, Linear) followed by a sigmoid $\sigma$ maps $\mathbf{z}$ to maps to $N_c$ predicted concept values between $0$ and $1$.
+
 \begin{equation}
   \hat{\mathbf{c}} = \sigma(\mathrm{MLP}(\mathbf{z})) \in [0,1]^{N_c}
   \label{eq:concepts}
 \end{equation}
 
-We evaluate two ways the classifier can consume these predictions. In the
-\textit{hybrid} variant (CB-CNN), the classifier combines the concept
-predictions with a residual pathway -- a projection of the raw backbone
-embedding $\mathbf{z}$ that bypasses the concept layer entirely:
+We evaluate two variants of the bottleneck models for predictions. In the hybrid variant (Figure \ref{fig:architecture2}), the classifier combines the concept predictions and the residual pathway which is a projection of the raw backbone embedding $\mathbf{z}$ that bypasses the concept layer entirely as in the following:
+
 \begin{equation}
   \hat{y} = \mathrm{Linear}([\hat{\mathbf{c}};\, \mathrm{ReLU}(W_r\mathbf{z})])
   \label{eq:classifier}
 \end{equation}
-where $\mathrm{ReLU}(W_r\mathbf{z})$ is the residual projection. In the
-\textit{pure} variant (CB-CNN-Plain), this residual term is omitted
-entirely and the classifier sees only the concept vector:
+
+where $\mathrm{ReLU}(W_r\mathbf{z})$ is the residual projection. In the pure variant (Figure \ref{fig:architecture1}), the residual term is removed and the classifier sees only the concept vector:
+
 \begin{equation}
   \hat{y} = \mathrm{Linear}(\hat{\mathbf{c}})
   \label{eq:classifier_plain}
 \end{equation}
-Equation~\ref{eq:classifier} is a strict superset of equation~\ref{eq:classifier_plain}: the two variants share every parameter except $W_r$ and the classifier's input dimensionality, so any behavioural difference between them isolates the effect of the residual pathway specifically. Parameter counts for all variants (TUAB configuration: $21$ channels, binary classifier) are reported in table~\ref{tab:params}.
+
+The two variants share every parameter except $W_r$ and the input representation of the classifier. The main difference between them is the effect of the residual pathway. The parameter counts for all variants are reported in table~\ref{tab:params}.
 
 \begin{table}[h]
 \caption{Parameter counts for all model variants (TUAB configuration).}
@@ -204,18 +223,19 @@ Equation~\ref{eq:classifier} is a strict superset of equation~\ref{eq:classifier
 Model & Parameters \\
 \hline
 CNN baseline (No concept) & 36,807 \\
-CB-CNN-Plain (pure bottleneck)  & 39,423 \\
-CB-CNN (hybrid)                      & 39,853 \\
+CB-CNN-Plain (pure bottleneck)  & 39,356 \\
+CB-CNN (hybrid)                      & 39,786 \\
 \hline
 \end{tabular}
 \label{tab:params}
 \end{table}
 
 
-\subsection{Concept Validation}
+\subsection{Concept Quality Validation}
 \label{sec:validation}
 
-As we use the model to predict those precomputed $30$ concepts (section \ref{sec:concept_bottleneck}), the coefficient of determination ($R^2$) between model predicted and the computed concept values on a held-out validation subset is measured. Here $R^2$ measures how well the concept predictor (the MLP inside the model) can predict the analytically computed concept value from the model learned features. All $30$ concepts are used as supervised targets during training and are all visible to the classifier -- none are excluded a priori. The $R^2 \geq 0.10$ threshold is instead applied post hoc, at evaluation and intervention time (sections~\ref{sec:concept_quality}, \ref{sec:intervention}), to decide which concepts are reliable enough to report or intervene on; it does not gate what the model is trained on. 
+As we use the model to predict those precomputed $30$ concepts (section \ref{sec:concept_bottleneck}), the coefficient of determination ($R^2$) between model predicted and the computed concept values on a held-out validation subset is measured. Here $R^2$ measures how well the concept predictor can predict the analytically computed concept value from the model learned features. The $30$ concepts are used as supervised targets during training and are all visible to the classifier. Post training, the $30$ concepts are used for evaluation as shown in section \ref{sec:concept_quality} and intervention as shown in section \ref{sec:intervention}. The aim is to decide which concepts are reliable enough to report or intervene.
+
 
 \subsection{Training}
 
@@ -226,18 +246,17 @@ The models in these experiments are trained with the joint loss:
                 \mathbf{c})
   \label{eq:loss}
 \end{equation}
-where $\mathcal{L}_{\mathrm{cls}}$ is cross entropy loss and $\mathcal{L}_{\mathrm{concept}}$ is Mean Square Error (MSE) loss between predicted and the computed concept values, and $\lambda = 0.5$. In these experiments, the Adam optimizer is used with learning rate $10^{-3}$ and weight decay $10^{-4}$ and cosine annealing. Gradient clipping is also applied to limit the exploding gradients. All experiments use seeds $42$, $43$ and $44$ to test model stability.
+where $\mathcal{L}_{\mathrm{cls}}$ is cross entropy loss and $\mathcal{L}_{\mathrm{concept}}$ is Mean Square Error (MSE) loss between predicted and the computed concept values, and $\lambda = 0.5$. Further use of $\lambda = 5, 20$ is applied to strengthen the concept loss in the training. The choices of $\lambda$ is reasoned about as a leakage mitigation in the section \ref{sec:mitigation}. In these experiments, the Adam optimizer is used with learning rate $10^{-3}$ and weight decay $10^{-4}$ and cosine annealing. Gradient clipping is also applied to limit the exploding gradients. All experiments use the seeds $42$, $43$ and $44$ to test model stability.
+
+
 
 
 \section{Results}
-In this section, we present the experimental results. Section \ref{sec:results_classification} reports the classification performance of the used models. Section \ref{sec:significance} evaluates the stability of these models across different random seeds and assesses the statistical significance of the differences in performance. Section \ref{sec:concept_quality} reports the concept prediction quality by comparing the predicted with the precomputed concepts using the coefficient of determination ($R^2$). Section \ref{sec:intervention} evaluates concept intervention strategy by replacing predicted concepts with their ground-truth values to assess their influence on the classification decisions. Finally, Section \ref{sec:leakage} quantifies information leakage through the residual pathway by comparing the predictive contributions of the concept and residual representations.
+In this section, we present the experimental results of this study. Section \ref{sec:results_classification} reports the classification performance of the used models. Section \ref{sec:concept_quality} reports the concept prediction quality by comparing the predicted with the precomputed concepts using the coefficient of determination ($R^2$). Section \ref{sec:leakage} quantifies information leakage through the residual pathway by comparing the predictive contributions of the concept and residual representations. Section \ref{sec:intervention} evaluates concept intervention strategy by replacing predicted concepts with their ground truth precomputed values to measure their influence on the predictions. Finally, section \ref{sec:mitigation} experiments the use of leakage mitigation strategy.
 
 \subsection{Classification performance}
 \label{sec:results_classification}
-The classification performance of the used models is reported in Table~\ref{tab:classification} on the two evaluation datasets. The accuracies of the three TUAB models are between $82.7$ and $83.6\%$ (table~\ref{tab:classification}). The differences is around $0.9$ percentage point band across model variants with the black-box CNN numerically highest. On the CAUEEG dataset, mean accuracies are wider with $4.8$ percentage point band. The CNN baseline is the highest ($0.627 \pm 0.012$), CB-CNN (hybrid) is in between ($0.605 \pm 0.014$) and CB-CNN-Plain (pure) is lowest ($0.579 \pm 0.008$). 
-
-
-
+The classification performances of the used models are reported in Table~\ref{tab:classification} on the two used evaluation datasets. The reported results show the mean and standard deviation or the metrics using the three used seeds. The accuracies of the three TUAB models are between $82.7$ and $83.6\%$ (table~\ref{tab:classification}). The differences is highest and lowest performing model is around $0.9$ percentage point with the black-box CNN numerically highest. On the CAUEEG dataset, mean accuracies are wider with $4.8$ percentage points. The CNN baseline is the highest ($0.627 \pm 0.012$), the hybrid is in between ($0.605 \pm 0.014$) and the pure is lowest ($0.579 \pm 0.008$). The bottleneck models have lower sensitivity ($9$ percentage point) and higher specificity ($6$ percentage point) than the black box model on the TUAB dataset.   
 
 \begin{table*}[h]
 \caption{Classification performance on TUAB (binary) and CAUEEG-Dementia (three-class) with mean $\pm$ std across three seeds ($42$, $43$, $44$).}
@@ -273,9 +292,9 @@ Model & Acc & F1 & Sens & Spec \\
 CNN
   & 0.627$\pm$0.012 & 0.632$\pm$0.011 & 0.627$\pm$0.013 & 0.813$\pm$0.005  \\
 CB-CNN (hybrid)
-  & 0.605$\pm$0.014 & 0.608$\pm$0.013 & 0.612$\pm$0.015 & 0.802$\pm$0.008  \\
+  & 0.605$\pm$0.014 & 0.608$\pm$0.013 & 0.611$\pm$0.015 & 0.802$\pm$0.008  \\
 CB-CNN-Plain (pure)
-  & 0.579$\pm$0.008 & 0.581$\pm$0.007 & 0.590$\pm$0.005 & 0.791$\pm$0.005  \\
+  & 0.579$\pm$0.008 & 0.581$\pm$0.006 & 0.590$\pm$0.005 & 0.791$\pm$0.005  \\
 \hline
 \end{tabular}
 \caption{CAUEEG-Dementia}
@@ -288,18 +307,18 @@ CB-CNN-Plain (pure)
 \subsection{Concept prediction quality}
 \label{sec:concept_quality}
 
-In order to evaluate the concept prediction quality, we used the models to predict those calculated concepts. This is done as a regression problem on the held-out evaluation set for each one of the three seeds and report the resulting $R^2$. The $R^2$ scores in Table~\ref{tab:r2family} is measured between the model predicted versus the actual computed concept value averaged across seeds. Table~\ref{tab:r2family} reports this the averaged $R^2$ across seeds and further averaged within each of the five concept families defined in section~\ref{sec:concepts}. The reports are for both CB-CNN variants on the TUAB and CAUEEG evaluation sets.
+In order to evaluate the concept prediction quality, we used the bottlenecks to predict those calculated concepts. As the bottlenecks are trained to fit the precomputed concepts in the form of regression problem, the objective here is to measure how well the those bottlenecks have learned. The $R^2$ scores are measured using the TUAB and CAUEEG held out evaluation set for each one of the three seeds and report the results in Table~\ref{tab:r2family}. The $R^2$ scores are measured between the model predicted versus the actual computed concept value averaged across seeds. The reported results are the averaged $R^2$ across the used seeds and further averaged within each of the five concept families defined in section~\ref{sec:concepts}. The full individual $R^2$ and logs of results are in the paper Github repository. 
 
 
 
-\begin{table*}[h]
-\caption{Mean concept $R^2$ per concept family, averaged across three seeds ($42$, $43$, $44$). The models used here are Hybrid (CB-CNN) with residual pathway and Pure (CB-CNN-Plain) with no residual.}
+\begin{table}[h]
+\caption{Mean concept $R^2$ per concept family averaged across the three seeds. The models used here are Hybrid (CB-CNN) with residual pathway and Pure (CB-CNN-Plain) with no residual.}
 
 
 \centering
 \begin{tabular}{l cc cc}
 \hline
-& \multicolumn{2}{c}{TUAB} & \multicolumn{2}{c}{CAUEEG-Dementia} \\
+& \multicolumn{2}{c}{TUAB} & \multicolumn{2}{c}{CAUEEG} \\
 Concept family & Hybrid & Pure & Hybrid & Pure \\
 \hline
 Band power (20)          & +0.327 & $-$0.217 & +0.435 & +0.181 \\
@@ -312,164 +331,172 @@ Overall mean (30)         & +0.292 & $-$0.213 & +0.318 & +0.026 \\
 \hline
 \end{tabular}
 \label{tab:r2family}
-\end{table*}
-
-Several observations emerge from the results. First, band-power concepts are by far the most reliably predicted family in every configuration ($R^2$ positive for $7$--$20$ of $20$ concepts), consistent with them being the most direct function of the backbone's own square-pool-log inductive bias. Within this family, alpha is a reliable predictor across essentially every region on both datasets under the hybrid design (TUAB: $R^2=0.38$--$0.53$ across all five regions; CAUEEG: $R^2=0.39$--$0.71$), though CAUEEG's are somewhat higher, consistent with alpha being a more stable rhythm in this dataset's adult/elderly population than in TUAB's much wider age range (section~\ref{sec:discussion_age}).
-
-Second, hemispheric asymmetry concepts fail across every configuration -- never once reaching $R^2 \geq 0.10$ -- and this is the family most damaged by removing the residual pathway, collapsing to $R^2 \approx -0.22$ to $-0.70$ under the pure bottleneck (versus $-0.04$ to $+0.003$ for the hybrid). Both ratio concepts (theta/alpha ratio and DTABR) are reliably positive under the hybrid design on both datasets ($R^2=0.22$--$0.35$ per family), but their behaviour under the pure bottleneck diverges: DTABR collapses cleanly to negative on both datasets ($-0.27$ TUAB, $-0.70$ CAUEEG), while theta/alpha ratio instead becomes highly seed-\textit{unstable} under the pure bottleneck rather than uniformly negative -- on TUAB it averages to a borderline-positive $R^2=0.155$ but with a seed-to-seed standard deviation of $0.336$ (larger than the mean itself), meaning some seeds predict it well and others fail outright, a qualitatively different and less reproducible failure mode than DTABR's.
-
-Third, and most consequential for section~\ref{sec:results_classification}'s finding that presence of the residual pathway does not change classification accuracy: removing it degrades mean $R^2$ in \textit{every single concept family, on both datasets} (from $+0.292$ to $-0.213$ overall on TUAB, and from $+0.318$ to $+0.026$ on CAUEEG). No family stays reliably informative under the pure bottleneck on \textit{both} datasets at once: band power is the closest, staying positive on CAUEEG ($+0.181$) but turning negative on TUAB ($-0.217$); PLV connectivity is weakly positive on TUAB ($+0.038$) but the single most damaged family on CAUEEG ($-0.479$). This means the classifier can reach statistically indistinguishable accuracy from the hybrid design while its own concept predictions become measurably less faithful to their analytical definitions, and less consistent across random seeds -- accuracy parity is not evidence of comparable concept quality.
-
-Finally, the new PLV connectivity family (section~\ref{sec:concepts}) shows a clear dataset split once properly averaged over seeds. On TUAB, frontal- and temporal-pair alpha PLV are both reliable connectivity concepts under either variant (frontal: $R^2=0.485$ hybrid, $0.141$ pure; temporal: $0.166$ hybrid, $0.117$ pure), while posterior-pair PLV never reaches the $0.10$ threshold. On CAUEEG, by contrast, \textit{none} of the three PLV concepts reliably reach $R^2 \geq 0.10$ under either variant once averaged across seeds -- frontal-pair PLV's apparent success under the CAUEEG hybrid model in a single-seed snapshot ($R^2=0.120$ at seed $42$ alone) does not survive averaging (three-seed mean $R^2=0.093$, just below threshold), and under the CAUEEG pure bottleneck frontal-pair PLV is not just negative on average ($R^2=-0.486$) but strongly seed-unstable (std $=0.653$, larger than the mean's magnitude) -- positive in some seeds, strongly negative in others, not a stable signal in either direction. This divergence between a seed-42 snapshot and the seed-averaged result is itself evidence that single-seed $R^2$ reporting can be misleading for weaker concept families.
-
-
-\subsection{Concept intervention experiment}
-\label{sec:intervention}
-
-In the experiments, we replaced every one of the model's $30$ predicted concepts with its actual computed ground-truth value \textit{simultaneously}, at inference time, and measured the resulting change in test accuracy, for both CB-CNN variants on both datasets. This all-at-once design directly tests the residual pathway's role: the pure bottleneck's classifier has no information source other than the concepts, so if the concepts it predicts are wrong in a way that matters, correcting all of them at once is its only chance to recover; the hybrid's residual pathway gives it an alternative route, so a small intervention effect there would be consistent with the residual absorbing whatever errors the concept predictions carry. Each configuration is run across all three seeds ($42$, $43$, $44$) using that seed's own checkpoint.
-
-Table~\ref{tab:intervention} reports the results. On both datasets, correcting all $30$ concepts at once leaves CB-CNN (hybrid) accuracy essentially unchanged (TUAB: $0.829 \to 0.831$, $+0.002$; CAUEEG: $0.605 \to 0.599$, $-0.006$ -- both well within the seed-to-seed noise already seen in table~\ref{tab:classification}). CB-CNN-Plain (pure) shows the opposite pattern on \textit{both} datasets, and severely so: correcting all $30$ concepts at once collapses TUAB accuracy from $0.827$ to $0.564$ ($-0.263$) and CAUEEG accuracy from $0.579$ to $0.362$ ($-0.218$). Correcting concepts \textit{together} moves the pure bottleneck's decision far more than presence/absence of any single concept plausibly could, and does so in the \textit{wrong} direction: the ground-truth concept values, injected all at once, actively hurt a classifier that was trained to make decisions from its own (imperfect) concept predictions rather than from the concepts' true values. That the hybrid design is essentially unaffected by the same intervention is the clearest evidence in this paper that its residual pathway, not its concept layer, is doing most of the classification work -- consistent with section~\ref{sec:leakage}'s leakage analysis.
-
-\begin{table}[h]
-\caption{Full intervention (all $30$ concepts corrected simultaneously) test accuracy, mean $\pm$ std across three seeds ($42$, $43$, $44$).}
-\centering
-\begin{tabular}{l cc cc}
-\hline
-& \multicolumn{2}{c}{TUAB} & \multicolumn{2}{c}{CAUEEG-Dementia} \\
-Model & Baseline & Post-intervention (Gain) & Baseline & Post-intervention (Gain) \\
-\hline
-CB-CNN (hybrid)      & 0.829$\pm$0.002 & 0.831$\pm$0.007 (+0.002$\pm$0.006) & 0.605$\pm$0.014 & 0.599$\pm$0.004 ($-$0.006$\pm$0.017) \\
-CB-CNN-Plain (pure)  & 0.827$\pm$0.007 & 0.564$\pm$0.040 ($-$0.263$\pm$0.043) & 0.579$\pm$0.008 & 0.362$\pm$0.028 ($-$0.218$\pm$0.022) \\
-\hline
-\end{tabular}
-\label{tab:intervention}
 \end{table}
+
+Table \ref{tab:r2family} reports the $R^2$ values for all the concepts averaged in each family. $R^2$ values are positive in predicting band power ($R^2=+0.327$), spectral ratio ($R^2=+0.348$) and spectral structure ($R^2=+0.396$) and PLV concepts ($R^2=+0.246$) using the TUAB dataset. The values of $R^2$ are relatively higher in the hybrid than the pure setup. Using the CAUEEG dataset, the same patterns show except the PLV concepts which shows limited $R^2$ value $+0.001$. The band power ($R^2=+0.435$), spectral ratio ($R^2=+0.286$) and spectral structure ($R^2=+0.193$) show relatively higher and positive values. It is noticed that the $R^2$ values is poorer in the pure setup than the hybrid model. Within the band power family, alpha is a reliable predictor across every region on both datasets under the hybrid design (TUAB: $R^2=0.38$--$0.53$, CAUEEG: $R^2=0.39$--$0.71$). Hemispheric asymmetry concepts fail across every configuration in both datasets as the values of  $R^2$ are either negative or near zero. 
+
+The spectral ratio concepts (theta/alpha ratio and DTABR) are reliably positive under the hybrid design on both datasets (TUAB:$R^2=0.348$, CAUEEG:$R^2=0.286$). On the other hand, their behaviour under the pure bottleneck are different. DTABR has negative on both datasets (TUAB:$-0.27$ , CAUEEG:$-0.70$). The theta/alpha ratio is also unstable across seeds.
+
+The results from Section~\ref{sec:results_classification} highlight the presence of the residual pathway has limited effects on changing classification accuracy. The accuracies are $0.827$ and $0.829$ for pure and  the hybrid setups, respectively, using the TUAB dataset. Using the CAUEEG dataset, the accuracies are $0.579$ and $0.605$ ($2.6$ point gap) for pure and the hybrid setups, respectively. This conclusion does not hold in concept prediction quality as the pure setup shows poorer values of $R^2$ in general. This means that the accuracy is not an evidence of the concept quality. The classifiers of both setup can reach the similar accuracy in TUAB and slightly and slightly lower on CAUEEG while the concept predictions are measurably less reliable. This is examined further in sections \ref{sec:leakage} and  \ref{sec:intervention}.
+
+PLV connectivity shows a clear dataset split. On TUAB, PLV are relatively reliable concepts with both variant setup (frontal: $R^2=0.485$ hybrid, $0.141$ pure, temporal: $0.166$ hybrid, $0.117$ pure). On CAUEEG, PLV cocnepts are poorer where none of the three PLV concepts reliably reach $R^2 \geq 0.10$ with both variants. Furthermore, under the CAUEEG pure bottleneck, PLV predictions are even negative on average ($R^2=-0.479$) and the frontal concept is highly unstable across seeds (std $=0.653$). In this CAUEEG settings, PLV concepts are not a stable signals.
 
 
 \subsection{Leakage analysis}
 \label{sec:leakage}
 
-As explained above, the residual pathway (equation~\ref{eq:classifier}) lets the CB-CNN (hybrid) classifier use backbone features beyond the predicted concepts. This may lead to leakage of task-relevant features around the concept layer and make the predictions less driven by the concepts. To quantify this directly, we freeze the trained CB-CNN backbone and train three linear probes on its extracted features, for each of the three seeds independently. All training is done with identical architecture and training parameters but differing only in input: concept-only, residual-only and both combined. If concept-only accuracy is roughly around the combined accuracy, we can conclude that the classifications are driven by concepts. If residual-only accuracy is above chance, a meaningful share of the signal bypasses the concept bottleneck. This analysis is specific to the hybrid design: CB-CNN-Plain has no residual pathway to probe by construction, so there is nothing to decompose for it -- its classification accuracy already \textit{is} its concept-only accuracy.
+As noticed above, the residual pathway lets the hybrid model use backbone features beyond the predicted concepts. This may lead to the point that predictions are less driven by the concepts. This is known as concept leakage of task relevant features. To quantify this directly, we freeze the trained CB-CNN backbones and train three linear probes on its extracted features. All training is done with identical architecture and training parameters but differing only in input which are concept-only, residual-only and both combined. The results are reported in table \ref{tab:leakage}. 
+
 
 \begin{table}[h]
-\caption{Leakage analysis (CB-CNN, frozen backbone, fresh linear probes on extracted features), mean $\pm$ std across three seeds ($42$, $43$, $44$). TUAB is a binary task (chance $=0.500$); CAUEEG-Dementia is three-class.}
+\caption{Linear probes on frozen hybrid (CB-CNN) features, mean $\pm$ std over three seeds. Full: accuracy of the trained hybrid model.}
 \centering
-\begin{tabular}{l c c c}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l ccc c@{}}
 \hline
-Dataset & Concept-only & Residual-only & Combined \\
+Dataset & Concept & Residual & Both & Full \\
 \hline
-TUAB             & 0.830$\pm$0.003 & 0.819$\pm$0.003 & 0.821$\pm$0.007 \\
-CAUEEG-Dementia  & 0.576$\pm$0.018 & 0.636$\pm$0.007 & 0.630$\pm$0.011 \\
+TUAB   & 0.830$\pm$0.003 & 0.819$\pm$0.003 & 0.821$\pm$0.007 & 0.829$\pm$0.002 \\
+CAUEEG & 0.576$\pm$0.018 & 0.636$\pm$0.007 & 0.630$\pm$0.011 & 0.605$\pm$0.014 \\
 \hline
 \end{tabular}
 \label{tab:leakage}
 \end{table}
 
-Table \ref{tab:leakage} shows two different failure patterns across the two datasets. On TUAB, the concept-only probe ($0.830$) is the \textit{highest} of the three, ahead of the combined probe ($0.821$); but the residual-only probe alone still reaches $0.819$ -- far above the $0.500$ chance level for this binary task, and close behind concept-only's own $0.830$. This means the residual pathway carries substantial independent predictive signal on its own: a linear probe given \textit{only} the raw residual features, with no access to the predicted concepts at all, can already recover almost as much accuracy as the concepts themselves. On CAUEEG, the pattern is more severe: the residual-only probe ($0.636$) clearly \textit{exceeds} the concept-only probe ($0.576$), and the combined probe ($0.630$) tracks residual-only rather than concept-only -- on this dataset, the residual pathway is carrying more of the classification-relevant signal than the concept bottleneck itself. In both cases this directly limits how much of CB-CNN's decision can be attributed to its concept-level explanation: a non-trivial, dataset-dependent share of the signal the classifier actually uses bypasses the concept bottleneck entirely, and on CAUEEG this share is the dominant one. (The combined probe falling slightly below the higher of its two inputs on both datasets -- concept-only on TUAB, residual-only on CAUEEG -- reflects ordinary finite-sample/optimization variation on these probes' small eval sets, not a violation of the principle that combined features can never carry strictly less information than either subset alone.)
+
+Table~\ref{tab:leakage} shows the results of those three probes. On TUAB, the concept probe ($0.830$) matches the full model ($0.829$) and the residual features does not improve it as the accuracy of combined $0.821$. The residual probe reaches a similar accuracy ($0.819$), so the residual carries largely the same information as the concepts rather than additional information. On CAUEEG, the residual probe ($0.636$) exceeds the concept probe ($0.576$) and the combined probe ($0.630$) improves on the concepts by about five points, indicating that the residual captures task-relevant information that the concept set does not contain. The hybrid concept explanations therefore do not reflect how its decisions are made. So part of the hybrid accuracy on the prediction task cannot be explained by its concepts. This is further mitigated in section~\ref{sec:mitigation}.
+
+
+
+\subsection{Concept intervention experiment}
+\label{sec:intervention}
+
+In the experiments, we replaced $30$ predicted concepts with its actual computed ground truth value at the inference time and measured the resulting change in test accuracy. The reason for this method is mitigate the low prediction quality of concepts by replacing all of them at inference time. The intervention configuration is run across all seeds ($42$, $43$, $44$) using the saved models.
+
+Table~\ref{tab:intervention} reports the results of the concept intervention experiments. On both datasets, correcting the $30$ concepts at once leaves the hybrid accuracy unchanged. The accuracy changes from $0.829$ to $0.831$ on TUAB and $0.605$ to $0.599$ on CAUEEG. On the other hand, pure model shows different pattern on both datasets. Correcting the $30$ concepts collapses TUAB accuracy from $0.827$ to $0.564$ (change is $-0.263$) and CAUEEG accuracy from $0.579$ to $0.362$ (change $-0.218$). The ground-truth concepts values actively hurt the pure model classifier accuracy. The hybrid design is unaffected by the same intervention is an evidence that its residual pathway, not its concept layer, is doing the actual task relevant learning. This is consistent with  the leakage analysis in section~\ref{sec:leakage}.
+
+\begin{table}[h]
+\caption{Concept intervention (all $30$ concepts corrected simultaneously) test accuracy, mean $\pm$ std across three seeds ($42$, $43$, $44$).}
+\label{tab:intervention}
+\centering
+
+\begin{tabular}{l cc}
+\multicolumn{3}{c}{(a) TUAB} \\
+\hline
+Model & Baseline & Post-intervention  \\
+\hline
+Hybrid & 0.829$\pm$0.002 & 0.831$\pm$0.007  \\
+Pure   & 0.827$\pm$0.007 & 0.564$\pm$0.040 \\
+\hline
+\end{tabular}
+
+\vspace{1em}
+
+\begin{tabular}{l cc}
+\multicolumn{3}{c}{(b) CAUEEG} \\
+\hline
+Model & Baseline & Post-intervention  \\
+\hline
+Hybrid & 0.605$\pm$0.014 & 0.599$\pm$0.004  \\
+Pure   & 0.579$\pm$0.008 & 0.362$\pm$0.028  \\
+\hline
+\end{tabular}
+
+\end{table}
 
 
 \subsection{Leakage mitigation}
 \label{sec:mitigation}
 
-Sections~\ref{sec:intervention} and~\ref{sec:leakage} identify two distinct failure modes under their respective designs: CB-CNN's residual pathway carries independent predictive signal that bypasses the concepts (leakage, specific to the hybrid), and CB-CNN-Plain's intervention gap shows its own concept predictions diverge from their true values in a way that actively matters to its decision (concept infidelity, specific to the pure bottleneck, since it has no residual to leak through). This experiment targets the second failure mode directly: $\lambda$ (equation~\ref{eq:loss}) is the only lever available to the pure bottleneck for anchoring concept predictions to their true values, since its classifier has no other pathway to fall back on. We retrained CB-CNN-Plain from scratch, across all three seeds on both datasets, at $\lambda \in \{5, 20\}$ -- a $10\times$ and $40\times$ increase over the $\lambda=0.5$ used everywhere else in this paper -- and, for each, measured accuracy, mean concept $R^2$, and the full-concept intervention gap exactly as in sections~\ref{sec:concept_quality}/\ref{sec:intervention}. This sweep is deliberately scoped to the pure bottleneck only: for the hybrid, raising $\lambda$ would be expected to improve concept $R^2$ without necessarily reducing residual-pathway leakage, since the classifier's split between concepts and residual is set by the classification cross-entropy alone, independent of $\lambda$ -- a hypothesis we did not additionally test by retraining the hybrid here.
+Sections~\ref{sec:intervention} and~\ref{sec:leakage} identify two distinct interesting results. The first is connected to the hybrid model residual pathway has learn representation that bypasses the concepts. This is earlier referred as leakage. The other is the concept intervention gap noticed when applied to the pure model. The concept intervention shows its own concept predictions diverge from their true values which matters to its decision. This experiment targets the second observation directly. The term $\lambda$ in equation~\ref{eq:loss} is simply a loss weight. This weight can be used for for matching the concept predictions to their true values in the pure bottleneck model. We retrained the pure model from scratch, across the three seeds on both datasets, at $\lambda \in \{0.5, 5, 20\}$.  The $\lambda=0.5$ is what was used in earlier experiment results reported in sections \ref{sec:results_classification}, \ref{sec:leakage}, \ref{tab:intervention}. For each run of different $\lambda$, measured accuracy, mean concept $R^2$, and the full-concept intervention experiments are run. This experiment is deliberately applied on the  pure bottleneck only. For the hybrid, raising $\lambda$ may improve concept $R^2$ without necessarily without guarantee of residual pathway leakage. This is because the the hybrid classifier used concepts and residual and used cross-entropy for classification . 
 
 \begin{table*}[h]
-\caption{Pure bottleneck (CB-CNN-Plain) $\lambda$ sweep, mean $\pm$ std across three seeds ($42$, $43$, $44$). $\lambda=0.5$ is the baseline already reported in tables~\ref{tab:classification}/\ref{tab:r2family}/\ref{tab:intervention}; $\lambda=5,20$ are new runs, trained from scratch under the same seeds and epoch budget. "Post-intervention acc." and "Gain" follow table~\ref{tab:intervention}'s full-intervention methodology (all $30$ concepts corrected simultaneously) -- for the pure bottleneck, the magnitude of this gap is this paper's measure of concept infidelity.}
+\caption{Pure bottleneck (CB-CNN-Plain) $\lambda$ sweep, mean $\pm$ std across three seeds ($42$, $43$, $44$). $\lambda=0.5$ is the baseline already reported in tables~\ref{tab:classification}/\ref{tab:r2family}/\ref{tab:intervention}; $\lambda=5,20$ are new runs, trained from scratch under the same seeds and epoch budget. "Post-intervention acc." follow table~\ref{tab:intervention}'s full-intervention methodology (all $30$ concepts corrected simultaneously) -- for the pure bottleneck, the magnitude of this gap is this paper's measure of concept infidelity.}
+
 \centering
 \begin{tabular}{l c cccc}
 \hline
-Dataset & $\lambda$ & Accuracy & Concept $R^2$ & Post-intervention Acc. & Gain \\
+Dataset & $\lambda$ & Accuracy & Concept $R^2$ & Post-intervention Acc. \\
 \hline
-TUAB & $0.5$ & 0.827$\pm$0.007 & $-$0.213$\pm$0.016 & 0.564$\pm$0.040 & $-$0.263$\pm$0.043 \\
-TUAB & $5$   & 0.842$\pm$0.002 & +0.396$\pm$0.010 & 0.716$\pm$0.027 & $-$0.126$\pm$0.028 \\
-TUAB & $20$  & 0.820$\pm$0.011 & +0.533$\pm$0.004 & 0.752$\pm$0.012 & $-$0.068$\pm$0.014 \\
+TUAB & $0.5$ & 0.827$\pm$0.007 & $-$0.213$\pm$0.016 & 0.564$\pm$0.040  \\
+TUAB & $5$   & 0.842$\pm$0.002 & +0.396$\pm$0.010 & 0.716$\pm$0.027 \\
+TUAB & $20$  & 0.820$\pm$0.011 & +0.533$\pm$0.004 & 0.752$\pm$0.012  \\
 \hline
-CAUEEG-Dementia & $0.5$ & 0.579$\pm$0.008 & +0.026$\pm$0.003 & 0.362$\pm$0.028 & $-$0.218$\pm$0.022 \\
-CAUEEG-Dementia & $5$   & 0.517$\pm$0.018 & +0.495$\pm$0.008 & 0.469$\pm$0.038 & $-$0.048$\pm$0.022 \\
-CAUEEG-Dementia & $20$  & 0.506$\pm$0.022 & +0.639$\pm$0.001 & 0.469$\pm$0.011 & $-$0.037$\pm$0.014 \\
+CAUEEG-Dementia & $0.5$ & 0.579$\pm$0.008 & +0.026$\pm$0.003 & 0.362$\pm$0.028  \\
+CAUEEG-Dementia & $5$   & 0.517$\pm$0.018 & +0.495$\pm$0.008 & 0.469$\pm$0.038  \\
+CAUEEG-Dementia & $20$  & 0.506$\pm$0.022 & +0.639$\pm$0.001 & 0.469$\pm$0.011  \\
 \hline
 \end{tabular}
 \label{tab:lambda_sweep}
 \end{table*}
 
-Table~\ref{tab:lambda_sweep} shows two clean, monotonic effects of $\lambda$ on both datasets. First, concept $R^2$ rises substantially and monotonically with $\lambda$: from $-0.213$ to $+0.533$ on TUAB, and from $+0.026$ to $+0.639$ on CAUEEG, confirming $\lambda$ is indeed the correct lever for the pure bottleneck's concept fidelity. Second, and more directly relevant to leakage, the intervention gain shrinks monotonically and substantially with $\lambda$ on both datasets: from $-0.263$ to $-0.068$ on TUAB (a $74\%$ reduction in the gap), and from $-0.218$ to $-0.037$ on CAUEEG (an $83\%$ reduction). This confirms that the pure bottleneck's large intervention gap at $\lambda=0.5$ was not purely an unavoidable property of removing the residual pathway -- a meaningful share of it was simply under-anchored concept supervision, which stronger $\lambda$ demonstrably corrects. However, the gap does not close to zero at either $\lambda$ value on either dataset ($-0.068$ TUAB, $-0.037$ CAUEEG at $\lambda=20$), so some residual concept infidelity persists even at $40\times$ the original anchoring strength, and we did not test whether still-larger $\lambda$ would close it further or simply trade away more accuracy for a vanishing additional gain.
+Table~\ref{tab:lambda_sweep} shows the effects of $\lambda$ on both datasets. First, concept $R^2$ rises substantially with increasing $\lambda$. $R^2$ increased from $-0.213$ to $+0.533$ on TUAB, and from $+0.026$ to $+0.639$ on CAUEEG. This argues that $\lambda$ is a correct mitigation for the pure concept fidelity. Second, the intervention gain substantially reduced with increasing $\lambda$ on both datasets. It shrinks from $-0.263$ to $-0.068$ on TUAB and from $-0.218$ to $-0.037$ on CAUEEG. This argues that anchoring the concept supervision helps in reducing intervention gap. However, the gap does not close to zero at either $\lambda$ value on both dataset ($-0.068$ TUAB, $-0.037$ CAUEEG at $\lambda=20$). 
 
-The accuracy cost of this mitigation differs sharply by dataset. On TUAB, $\lambda=5$ is close to a free improvement: accuracy actually \textit{rises} slightly ($0.827 \to 0.842$) alongside the gains in $R^2$ and intervention gap, and only $\lambda=20$ costs a small amount of accuracy relative to the $\lambda=0.5$ baseline ($0.827 \to 0.820$). On CAUEEG, by contrast, both new $\lambda$ values cost substantial accuracy relative to the $\lambda=0.5$ baseline ($0.579 \to 0.517$ at $\lambda=5$, $\to 0.506$ at $\lambda=20$) -- here, closing most of the intervention gap requires a real, double-digit-percentage-point trade against accuracy, not a free lunch. This mitigation is explicitly scoped to the pure bottleneck's own concept-infidelity problem; it says nothing about, and was not expected to address, CB-CNN's separate residual-pathway leakage (section~\ref{sec:leakage}), which remains open (section~\ref{sec:limitations}).
+On the other hand, the accuracy cost of this mitigation differs sharply by dataset. On TUAB, $\lambda=5$ accuracy actually rises slightly ($0.827 \to 0.842$) alongside the gains in $R^2$ and smaller intervention gap. With $\lambda=20$ accuracy decreased relative to the $\lambda=0.5$ baseline ($0.827 \to 0.820$). On CAUEEG, by contrast, both new $\lambda$ values has substantial decrease accuracy relative to the $\lambda=0.5$ baseline. The accuracy decreased from $0.579$  to $0.517$ at $\lambda=5$ and further to $0.506$ at $\lambda=20$. 
+
 
 
 \section{Discussion}
 
-The main finding of this study is the introduction of a clinical concept bottleneck in the domain of EEG, evaluated in both a hybrid form (with a residual pathway) and a pure form (without one). We used three seeds to train all three TUAB models, and the mean accuracies fall within a $0.9$ percentage-point band. Several models have been applied on the TUAB dataset and achieved accuracy between $77.9\%$ and $86.6\%$ depending on the model size and architecture type \cite{kiessner2023extended}. Using the CAUEEG dataset, mean accuracies across the three seeds span a wider $4.8$ percentage-point band, but this spread is not statistically significant (section~\ref{sec:significance}). The previous results from the original authors of the dataset \cite{kim2023caueeg} achieved accuracy is $54.27\%$ using a simple CNN model.
+The main finding of this study is the introduction of a clinical concept bottleneck in the domain of EEG evaluated in both a hybrid form (with a residual pathway) and a pure form (without one). 
 
-Across the three seeds, both CB-CNN (hybrid) and CB-CNN-Plain (pure) match the black-box CNN baseline on TUAB and CAUEEG without a statistically significant reduction in performance (section~\ref{sec:significance}), and the two concept-routing designs are not significantly different from \textit{each other} either. In the CBM literature, it is shown that accuracy reduction is an expected cost of concept interpretability \cite{koh2020, mahinpei2021}. Here, using the defined clinical concepts has limited effect on the accuracy, whether or not a residual pathway is present. We argue that these observations align directly with this paper's claim that the use of concepts has no significant accuracy cost.
+\subsection{Bottleneck models}
 
-However, accuracy parity does not mean the two designs are equivalent as explanations, and two further analyses in this paper show the hybrid design's accuracy is not really coming from its concepts. First, the leakage analysis (section~\ref{sec:leakage}) shows CB-CNN's residual pathway carries substantial independent signal on both datasets: a linear probe given only the residual features, with no access to the predicted concepts, recovers $81.9\%$ accuracy on TUAB (essentially tied with the $83.0\%$ concept-only probe) and $63.6\%$ on CAUEEG, where it actually \textit{exceeds} the $57.6\%$ concept-only probe. Second, the intervention experiment (section~\ref{sec:intervention}) shows that replacing all $30$ of CB-CNN's predicted concepts with their true values changes its accuracy by less than one standard deviation of seed noise on either dataset ($+0.002$ on TUAB, $-0.006$ on CAUEEG) -- if the concept layer were doing the real work, correcting every concept at once should have moved accuracy noticeably. Both analyses point the same direction: a non-trivial, and on CAUEEG dominant, share of CB-CNN's actual decision-making bypasses its concept-level explanation and routes through the residual pathway instead. CB-CNN-Plain removes this specific failure mode by construction, since its classifier has no pathway other than the concepts to route information through -- and the same intervention experiment confirms this design really does depend on its concepts: correcting all $30$ at once \textit{collapses} its accuracy on both datasets ($-0.263$ TUAB, $-0.218$ CAUEEG), showing the classifier learned to work with its own imperfect concept predictions specifically, not with the concepts' true values. But, as section~\ref{sec:concept_quality} shows, having no escape hatch also comes at the cost of measurably worse concept prediction quality across every concept family. The choice between the two designs is therefore not simply "more accurate" versus "more interpretable," but a trade-off between how faithfully the classifier's decision routes through the concepts and how faithfully those concepts themselves track their analytical definitions.
+We used three seeds to train all three TUAB models. The models achieved between $0.827$ and $0.836$ in the classification task using TUAB dataset. Several Deep Learning models have been applied on the TUAB dataset and achieved accuracy between $0.779$ and $0.866$ depending on the model size and architecture type \cite{kiessner2023extended}. Using the CAUEEG dataset, The accuracies are between $0.579$ and $0.627$. The previous results from the original authors of the dataset \cite{kim2023caueeg} achieved accuracy is $0.543$ using a simple CNN model. So, we argue that the accuracies from the two datasets align with what is reported on these two benchmarks.
 
-\subsection{Hybrid versus pure bottleneck}
+Across the three seeds, both hybrid and pure match the black-box CNN baseline on TUAB and CAUEEG have slightly lower reduction in performance. The reduction in accuracy is $0.9$ and $0.7$ percentage points in the TUAB dataset for both pure and hybrid models. On the CAUEEG dataset, The reduction in accuracy is $4.8$ and $2.2$ percentage points. In the CBMs literature, it is shown that accuracy reduction is an expected cost of concept interpretability \cite{koh2020, mahinpei2021}. 
 
-On CAUEEG-Dementia, the black-box CNN baseline is numerically the strongest of the three models ($0.627 \pm 0.012$), ahead of CB-CNN (hybrid, $0.605 \pm 0.014$) and CB-CNN-Plain (pure, lowest at $0.579 \pm 0.008$), though none of these differences reach significance (table~\ref{tab:mcnemar_caueeg}). On TUAB, all three models are close (table~\ref{tab:mcnemar}), with the CNN baseline again numerically highest ($0.836 \pm 0.010$) and the two CBM variants within $0.2$ points of each other.
-
-Regarding concept quality, removing the residual pathway reduces mean concept $R^2$ in every family on both datasets (table~\ref{tab:r2family}): from $0.292$ to $-0.213$ on TUAB and from $0.318$ to $0.026$ on CAUEEG. Hemispheric asymmetry and spectral ratio are hit hardest, both collapsing to negative mean $R^2$ under the pure bottleneck on both datasets; no family stays reliably informative under the pure bottleneck on \textit{both} datasets at once. This is consistent with the pure bottleneck's classifier having no pathway other than the concepts: the joint training objective must route 100\% of the classification signal through the concept layer, which our results suggest can pull concept predictions for classification-relevant-but-weakly-analytically-grounded concepts away from their true values, rather than making them more faithful -- and the intervention experiment (section~\ref{sec:intervention}) shows this is exactly the concept set the pure bottleneck's classifier has learned to depend on, since substituting the concepts' \textit{true} values in place of its own predictions is actively harmful to it.
-
-This $\lambda=0.5$ picture, however, is not the end of the story: section~\ref{sec:mitigation}'s $\lambda$ sweep shows a substantial share of the pure bottleneck's concept infidelity and intervention gap is a consequence of \textit{how hard} $\lambda=0.5$ anchors concepts, not an unavoidable property of removing the residual pathway per se. Raising $\lambda$ to $20$ closes $74\%$ of TUAB's intervention gap and $83\%$ of CAUEEG's, with concept $R^2$ rising from negative-or-near-zero to solidly positive on both datasets (table~\ref{tab:lambda_sweep}) -- and on TUAB, the first step of this ($\lambda=5$) comes at essentially no accuracy cost, even a small numerical gain. This reframes the hybrid/pure comparison: "pure bottleneck" is not a single fixed point but a family of models trading accuracy against concept fidelity as $\lambda$ varies, and at least on TUAB, a meaningfully more faithful pure bottleneck is available close to for free. CAUEEG is less forgiving -- closing most of its gap costs $6$--$7$ accuracy points relative to its own $\lambda=0.5$ baseline -- so the achievable trade-off is dataset-dependent, and in neither case does the gap close completely even at $\lambda=20$. This mitigation is specific to the pure bottleneck; CB-CNN's separate residual-pathway leakage (section~\ref{sec:leakage}) is not addressed by it and remains a largely open problem (section~\ref{sec:limitations}).
-
-%The concepts have to be learnable from the model representations for it to working. We noticed that delta and theta concepts align naturally with the CNN's band power inductive bias
+However, the performance does not mean the two hybrid and pure modes are equivalent as explanations. Further analyses in this paper show the hybrid model accuracy is not really coming from its concepts. First, the leakage analysis (section~\ref{sec:leakage}) shows that the hybrid residual pathway carries substantial independent signal on both datasets. The linear probe given only the residual features, with no access to the predicted concepts, recovers $81.9\%$ accuracy on TUAB and $63.6\%$ on CAUEEG. 
 
 
-\subsection{Age heterogeneity and concept validity}
-\label{sec:discussion_age}
+\subsection{Concept Quality and Concept Intervention}
 
-Two concept groups consistently fail as concept targets ($R^2 < 0.10$) in \textit{all four} configurations (both datasets, both CB-CNN variants, table~\ref{tab:r2family}): all three hemispheric asymmetry concepts, and posterior-pair alpha PLV. Values of $R^2$ near zero or negative indicate the backbone's learned representations do not encode information about this concept. However, that does not mean the biomarker is clinically uninformative. One candidate explanation is the age composition of each dataset: TUAB has a wide age distribution, as young as $2$ years of age to as old as $88$ \cite{obeid2016}, including paediatric subjects for whom alpha power is developmentally low or absent, which would make asymmetry and connectivity indices -- both of which assume a stable alpha rhythm to compare against -- unreliable. CAUEEG-Dementia, by contrast, consists only of adults and elderly subjects with a stable alpha rhythm.
+The concept quality is good indicator as only concepts that are predicted reliably should be presented as explanations to clinicians. Concept prediction quality varies strongly across concept groups (table~\ref{tab:r2family}). Band power concepts are the most reliably predicted in every configuration. Concepts such as spectral ratios and alpha peak amplitude are also predicted well under the hybrid design. In contrast, the
+hemispheric asymmetry concepts are not learned in any configuration, and PLV connectivity is only partly learnable on TUAB and not on CAUEEG. The values of $R^2$ increased significantly once the $\lambda$ increased which means that concepts are more reliably predicted. This is highlighted in details in table~\ref{tab:lambda_sweep}.
 
-This explanation holds only partially. It correctly predicts CAUEEG's markedly better alpha \textit{band-power} $R^2$ than TUAB's under the pure bottleneck ($+0.181$ vs $-0.217$, table~\ref{tab:r2family}), consistent with alpha itself being more reliably present in an age-homogeneous adult population. But it does \textit{not} explain why hemispheric asymmetry and posterior PLV -- which explicitly depend on a stable alpha rhythm -- fail almost identically on CAUEEG (asymmetry mean $R^2=-0.039$ hybrid) as they do on TUAB (asymmetry mean $R^2=+0.003$ hybrid), despite CAUEEG having none of TUAB's paediatric alpha instability. If age-driven alpha instability alone explained the asymmetry/connectivity failure, an age-homogeneous adult dataset should show a substantially better result, and it does not. This suggests age composition is at most a partial explanation, and that something else -- possibly the specific spatial pairs chosen, the linear readout imposed on a shallow single-backbone CNN, or a genuine limit on how much interhemispheric/connectivity information this architecture's pooled features retain -- also contributes, and is a question this paper's results raise rather than settle.
 
-Separately, and independently of age, both ratio concepts (theta/alpha ratio and DTABR) are reliably predicted by the hybrid design on \textit{both} datasets ($R^2 \geq 0.21$ per concept) but fail specifically under the pure bottleneck on both -- though not identically: DTABR collapses cleanly to negative under the pure bottleneck on both datasets, while theta/alpha ratio instead becomes highly seed-unstable rather than uniformly negative (section~\ref{sec:concept_quality}). Frontal- and temporal-pair PLV show a complementary, dataset-specific pattern: both are reliably predicted under either variant on TUAB, but neither reliably reaches $R^2 \geq 0.10$ on CAUEEG under either variant. Neither of these patterns tracks age composition the way the age-heterogeneity hypothesis would predict -- the ratio concepts' failure tracks presence/absence of the residual pathway, and the PLV concepts' failure tracks dataset rather than age within a dataset -- so both are better explained by section~\ref{sec:concept_quality}/\ref{sec:intervention}'s hybrid-vs-pure story, or by dataset-specific factors beyond age alone, than by age heterogeneity per se.
+The intervention experiment (section~\ref{sec:intervention}) separates the two designs. Replacing all $30$ predicted concepts with their true values leaves the hybrid's accuracy essentially unchanged on both datasets ($+0.002$ on TUAB, $-0.006$ on CAUEEG). Removing the residual pathway lowers concept quality in every family on both datasets, while accuracy changes little. This is consistent with its concept predictions being relatively close to their true values as highlighted by the values of $R^2$. The pure bottleneck behaves differently. the same intervention collapses the accuracy on both datasets ($-0.263$ on TUAB, $-0.218$ on CAUEEG). the pure classifier rely on its own predicted concept values, which deviate from the true values which is highlighted in its lower concept $R^2$ as explained in section~\ref{sec:concept_quality}. The leakage is aimed to be solved by increasing the concept-loss weight $\lambda$ which helped to increase $R^2$ substantially and reduce concept intervention accuracies. The mitigation is explained in section~\ref{sec:mitigation}. The mitigation strategy has a small accuracy cost on TUAB and substantial cost on CAUEEG. The choice of design is therefore a trade-off between concept faithfulness and classification accuracy.
+
+
+
+\subsection{Concept leakage and mitigation}
+\label{sec:discussion_leakage}
+
+The pure bottleneck reaches accuracy close to the hybrid model. However, its concepts are markedly less faithful (table~\ref{tab:r2family}), and replacing them with their true values collapses its accuracy (table~\ref{tab:intervention}). This is known as concept leakage \cite{mahinpei2021, havasi2022}. Without a residual pathway, the classification loss pulls the predicted concepts away from their analytical values so that they carry hidden label information. The learning is not relevant to the true concepts. The hybrid is less affected because its residual pathway offers an alternative path for encoding the task relevant patterns. Accuracy alone therefore cannot reveal whether concept explanations are faithful.
+
+
+Arguably, increasing the weight of the concept loss $\lambda$ substantially reduces this leakage. Concept $R^2$ rises and the intervention gap shrinks on both datasets (table~\ref{tab:lambda_sweep}). However, a gap of $3.7$--$6.8$ points remains at $\lambda = 20$. Furthermore, some concepts such as the asymmetry concepts stay unlearnable. This migiation comes with accuracy cost that reflects how completely the concept set covers each task. It is small on TUAB and substantial on CAUEEG. 
 
 
 \subsection{Limitations}
-\label{sec:limitations}
 
-The $30$ candidate concepts do not cover all pathologically relevant EEG features for the abnormal pathologies. Many candidate concepts can be proposed here including additional functional connectivity concepts (we evaluate only alpha-band PLV between three electrode pairs), network features such as node degrees, global and local efficiency, clustering coefficient and complexity \cite{10.1007/978-981-95-9575-4_2}. As EEG has been extensively used in neurological research, a comprehensive list of candidate biomarkers can be implemented here which could be a future direction.
+The $30$ candidate concepts do not cover all pathologically relevant EEG features for the abnormal pathologies. Many candidate concepts can be proposed here including additional and systematic functional connectivity concepts, network features such as node degrees, global and local efficiency, clustering coefficient and complexity \cite{10.1007/978-981-95-9575-4_2}. As EEG has been extensively used in neurological research, a comprehensive list of candidate biomarkers can be implemented here which could be a future direction. Further experimental settings including different models based on sequence, attentions and graph based models can be explored here.  
 
-Sections~\ref{sec:leakage} and~\ref{sec:intervention} show CB-CNN's residual pathway carries substantial independent signal (up to $81.9\%$ accuracy on its own on TUAB, and actually exceeding the concept-only probe on CAUEEG), and that correcting all of its concepts at once barely moves its accuracy -- both indicating a non-trivial share of its classification signal bypasses the concept bottleneck. Section~\ref{sec:mitigation} tests one possible fix, but only for CB-CNN-Plain's \textit{own} concept-infidelity problem (raising $\lambda$, the concept-loss weight), since that model has a single lever and no residual to confound the test; it is not a fix for CB-CNN's residual-pathway leakage specifically, and we did not retrain the hybrid under larger $\lambda$ to check whether it would (plausibly) improve concept $R^2$ there too without reducing leakage, since nothing in $\lambda$ touches the classifier's free choice of how much to weight concepts versus residual. We also compare only the two extremes of the residual-pathway design space -- a full residual pathway (CB-CNN) and no residual pathway at all (CB-CNN-Plain); intermediate residual dimensions were not explored, and would likely reveal a more continuous trade-off between leakage and concept quality than the binary comparison presented here. A direct fix for the hybrid's own leakage remains future work, such as \cite{galliamov2026conceptsinformationbottleneckmodels}, which integrates a penalization or regularization layer into the model, or a weight-decay/adversarial penalty applied specifically to the residual branch's own contribution to the classifier.
+Section~\ref{sec:mitigation} tests one possible fix, but only for the pure model own concept problem (raising $\lambda$, the concept-loss weight). This fix does not apply to the hybrid residual-pathway leakage specifically, and we did not retrain the hybrid under larger $\lambda$ to check whether it would improve concept $R^2$ there too without reducing leakage. A possible direct fix for the hybrid's own leakage remains future work, such as \cite{galliamov2026conceptsinformationbottleneckmodels} which integrates a penalization or regularization layer into the model. This penalty applied specifically to the residual own contribution to the classifier.
 
-Finally, results are reported on two datasets (TUAB, CAUEEG) spanning different pathologies and age ranges. Further validation on additional independent corpora for certain pathologies such as Dementia and Alzheimer would strengthen generalization claims in this study.
+In this study, results are reported on two datasets (TUAB, CAUEEG) spanning different pathologies and age ranges. Further validation on additional corpora for certain pathologies such as Dementia and Alzheimer would strengthen generalization claims in this study. Due to the limited availability of datasets that are suitable for training the models, this remains a less viable option to extend this study. The results are not explained in lights of clinical and neuroscientific biomarkers. A detailed neurophysiological interpretation of individual concept contributions is beyond the scope of this study. This is left as a future direction to limit the scope of this article. 
 
 
 \section{Conclusion}
+We have presented concept bottleneck models (CBMs) for EEG pathology detection, in a hybrid form (CB-CNN, with a residual pathway) and a pure form (CB-CNN-Plain, without one). Predictions are routed through 30 clinical EEG biomarkers computed analytically from the signal, so the concepts require no manual annotation and can be inspected and corrected by clinicians at inference time.
 
-We have presented Concept Bottleneck Models (CBMs) for interpretable machine learning for EEG pathology detection, in both a hybrid form (CB-CNN, with a residual pathway) and a pure form (CB-CNN-Plain, without one). The predictions of CBMs are applied through analytically defined clinical EEG biomarkers derived from previous literature, including a new interhemispheric alpha-band phase-locking connectivity family. This enables concept-level explanations and clinician intervention and overcomes the need for post-hoc approximation.
+Across three seeds, both variants achieve similar accuracy to the black-box CNN on abnormality detection (TUAB) and are two to five percentage points lower on dementia classification (CAUEEG). However, similar accuracy does not imply faithful explanations. The pure bottleneck has symptoms of concept leakage. The predicted concepts deviate from their analytical values (mean $R^2$ of $-0.213$ on TUAB and $0.026$ on CAUEEG). Replacing  them with their true values reduces the accuracy by $26$ and $22$ percentage points. The hybrid model remains unaffected by the concept intervention. Linear probes show that its concepts are sufficient for abnormality detection, whereas on the dementia task its residual pathway carries information that the concept set does not contain.
 
-Across three independent seeds on both TUAB and CAUEEG, neither CB-CNN variant differs significantly in accuracy from a black-box CNN baseline, nor from each other (McNemar's $p>0.05$ for all pairwise comparisons, section~\ref{sec:significance}), demonstrating that concept supervision here carries no statistically significant evidence of an accuracy difference, with or without a residual pathway. This is contrary to the accuracy degradation typically reported previously in literature. However, this accuracy parity masks a real trade-off. CB-CNN achieves substantially better concept prediction quality than CB-CNN-Plain (mean $R^2$, averaged across seeds, $0.292$ vs $-0.213$ on TUAB; $0.318$ vs $0.026$ on CAUEEG), but two independent analyses show CB-CNN's own accuracy is not really coming from those concepts: the leakage analysis (section~\ref{sec:leakage}) shows its residual pathway alone reaches $81.9\%$ accuracy on TUAB (nearly matching the concept-only probe) and \textit{exceeds} the concept-only probe on CAUEEG, and the intervention experiment (section~\ref{sec:intervention}) shows that correcting all $30$ of its predicted concepts to their true values barely changes its accuracy on either dataset. CB-CNN-Plain removes this leakage pathway by construction, since its classifier has no route to the raw features, and the same intervention experiment confirms it truly depends on its concepts: correcting them all collapses its accuracy by $26$ points on TUAB and $22$ points on CAUEEG. But this dependence forces 100\% of the classification signal through concepts whose own predictions are then measurably less faithful to their analytical definitions.
+Increasing the weight of concept loss substantially reduces concept leakage in the pure bottleneck. Using $\lambda = 20$, mean concept $R^2$ rises to $0.533$ on TUAB and $0.639$ on CAUEEG. The intervention gap shrinks to $7$ and $4$ percentage points. The accuracy cost of this mitigation is small on TUAB but larger on CAUEEG. This reflects that concept prediction quality and intervention should be reported along with the accuracy when concept bottlenecks are used for clinical settings.
 
-Future work can extend this study by extending the concept set with age-stratified normalization to recover alpha, asymmetry, and connectivity concepts in the population, and with a broader connectivity concept family beyond the three alpha-band PLV pairs evaluated here. Furthermore, uncertainty quantification at the concept level can be used to flag unreliable individual concept predictions for clinical review. Intermediate residual-pathway sizes between the hybrid and pure extremes compared here are a further direction, to characterize the leakage/concept-quality trade-off continuously rather than at its two endpoints.
+Future work includes extending the concept set with additional connectivity and network features. Evaluating alternative Leakage mitigation strategies such as regularisation of the residual pathway. This study would benefits from validating the approach on further clinical corpora and with detailed neurophysiological interpretation.
 
-
-
-%\ack{This work has received funding from the European Union's Horizon 2020 research and innovation programme under grant agreement No. 964220. This document reflects views of author(s) and the European Commission is not responsible for any use that may be made of the information it contains.}
 
 \section*{Ethics statement}
 This study involved analysis of two publicly available and fully anonymized EEG datasets. The CAUEEG dataset \cite{kim2023caueeg} was collected under IRB approval from Chung-Ang University Hospital. The Temple University Hospital EEG Corpus \cite{obeid2016} was collected in accordance with the Declaration of Helsinki under full Temple University IRB approval and de-identified in compliance with the HIPAA Privacy Rule.
 
 
-\roles{Mohamed Radwan: Conceptualisation, Methodology, Software, Investigation, Writing -- Original Draft.
-Pedro G. Lind: Supervision, Conceptualisation, Writing -- Review \& Editing.
-Anis Yazidi: Supervision, Conceptualisation, Writing -- Review \& Editing}
-
-
 \section*{Conflict of Interest}
 The authors declare no known competing interests.
 
-
-% ─────────────────────────────────────────────────────────────────────────────
-% References are in references.bib (BibTeX). If your local setup provides an
-% IOP-specific style file (e.g. iopart-num.bst) it can be substituted below;
-% `unsrt` (numbered, in citation order) is used as a universally-available
-% default since this could not be compile-tested in this environment.
-% ─────────────────────────────────────────────────────────────────────────────
-
-\clearpage 
-\bibliographystyle{unsrt}
+\section*{References}
+\bibliographystyle{IEEEtran}
 \bibliography{references}
 
 \end{document}
